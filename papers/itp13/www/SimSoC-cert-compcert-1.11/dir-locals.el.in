@@ -1,0 +1,13 @@
+((coq-mode .
+    ((coq-load-path .
+        ("/path/to/simsoc-cert/compcert/lib"
+	 "/path/to/simsoc-cert/compcert/common"
+	 "/path/to/simsoc-cert/compcert/cfrontend"
+	 "/path/to/simsoc-cert/compcert/flocq/Core"
+	 "/path/to/simsoc-cert/compcert/flocq/Calc"
+	 "/path/to/simsoc-cert/compcert/flocq/Prop"
+	 "/path/to/simsoc-cert/compcert/flocq/Appli"
+	 "/path/to/simsoc-cert/coq"
+	 "/path/to/simsoc-cert/arm"
+	 )))
+))

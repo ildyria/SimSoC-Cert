@@ -1,0 +1,8 @@
+\begin{coqdoccode}
+\coqdocnoindent
+\coqdockw{Inductive} \coqdocvar{even\_i} : \coqdocvar{nat} \ensuremath{\rightarrow} \coqdockw{Prop} :=\coqdoceol
+\coqdocindent{1.00em}
+\ensuremath{|} \coqdocvar{E0}: \coqdocvar{even\_i} 0\coqdoceol
+\coqdocindent{1.00em}
+\ensuremath{|} \coqdocvar{E2}: \coqdockw{\ensuremath{\forall}} \coqdocvar{n}, \coqdocvar{even\_i} \coqdocvar{n} \ensuremath{\rightarrow} \coqdocvar{even\_i} (\coqdocvar{S} (\coqdocvar{S} \coqdocvar{n})).\coqdoceol
+\end{coqdoccode}

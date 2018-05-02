@@ -1,0 +1,4 @@
+\begin{coqdoccode}
+\coqdocindent{1.00em}
+\coqdockw{\ensuremath{\forall}} \coqdocvar{v} , \coqdocvar{eval} (\coqdocvar{tm\_plus} (\coqdocvar{tm\_const} 1) (\coqdocvar{tm\_const} 0)) \coqdocvar{v} \ensuremath{\rightarrow} \coqdocvar{v} = \coqdocvar{nval} 1.\coqdoceol
+\end{coqdoccode}

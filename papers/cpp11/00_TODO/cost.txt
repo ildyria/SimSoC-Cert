@@ -1,0 +1,39 @@
+> [...] it's not clear why it's important to verify SoC simulators.
+> Verification should reduce overall costs. Usually that restricts
+> verification to components of the end system (e.g. control software) or
+> tools that must preserve the correctness of those components (e.g.
+> compilers). In contrast, the SoC simulator is only used for prototyping
+> before hardware is available and for debugging. Since the simulator itself
+> is not part of any end system, it is not clear why it ought to be verified.
+> To address this criticism, the authors could provide examples where
+> simulator bugs were so expensive that it would have been cheaper to verify
+> the simulator than simply test it.
+
+-----------------------------------------------------------------------------
+
+Vania: 
+
+This criticism is partly valid. We do not have a good idea of
+the cost of verification. And we have some idea of the cost of testing.
+In particular, this is why I wanted initially Xiaomu to generate
+an exhaustive coverage testing.
+Still using formal methods if we would generate all tests for all
+instructions, we could guarantee to have a complete test coverage
+of all instructions and all variants of each instructions.
+
+Then we would know the cost of testing.
+We can figure out the cost of manual testing.
+
+For example I computed that there are about 3960  variants of boolean
+operations for ARM5. This would mean roughtly 40,000 lines of C code to
+write to have complete tests of Boolean
+
+-----------------------------------------------------------------------------
+
+
+Claude:
+
+I think it is too early to answer that point. We cannot say what is the
+cheapest before we know the manpower-cost of the whole proof.
+Note that trying to run Linux is easy. The diffcult and tedious part is the
+debug.

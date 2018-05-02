@@ -1,0 +1,1092 @@
+\newcommand{\coqvartt}[1]{\texttt{#1}}
+
+\chapter{Designing our own inversion}
+\label{cpt:inv}
+% DONT REMOVE THIS REMINDER: biffer avec \st
+%\cjf{Comments by JF will be presented in this way.}\margjf{1}{Or this way in the margin}
+
+In correctness proofs of ARM instructions, which involve
+the large-size inductively defined relation coming from \compcert C semantics,
+many steps require inverting a hypothesis to 
+perform a case analysis and extract all useful constraints from the hypothesis.
+The Coq built-in tactic \inversion is usually considered to be the right choice
+in such situations.
+But using it made us suffering from severe controllability,
+maintenance and efficiency issues.
+To circumvent these issues, we propose an inversion technique based on the
+combination of an antidiagonal argument and the impredicative encoding
+of inductive data-structures,
+which we are going to introduce in this chapter.
+Part of the material presented of this chapter has been published in~\cite{2013itp}.
+
+\selectlanguage{french}
+\section*{Résumé}
+
+\begin{resume}
+Dans les preuves de correction des instructions ARM,
+qui reposent sur des relations définies inductivement de grande taille,
+issues de la sémantique de \compcert C,
+de nombreuses étapes consistent à inverser une hypothèse pour effectuer
+une analyse de cas et extraire toutes les contraintes utiles contenues 
+dans cette hypothèse.
+La tactique Coq standard \inversion est généralement considérée comme
+étant le bon choix dans de telles situations.
+Cependant son utilisation nous a posé de graves problèmes de contrôlabilité,
+de maintenance et d'efficacité.
+Pour les résoudre, nous proposons une technique d'inversion basée sur
+la combinaison d'un argument antidiagonal et d'un codage imprédicatif
+des structures de données inductives,
+qui fait l'objet de ce chapitre.
+Le matériel présenté ici a été partiellement publié dans~\cite{2013itp}.
+\end{resume}
+
+\selectlanguage{english}
+
+\section{Why a new inversion}
+\label{sec:ninv}
+\subsection{Inversion tactic in Coq}
+During the development of a proof, 
+if a hypothesis is an instance of an inductive predicate
+and we want to derive the consequences of this hypothesis,
+the general logical principle to be used is called \emph{inversion}.
+To this effect, the Coq proof assistant provides
+a useful tactic called \inversion \cite{coqmanual}
+which is available in several variants.
+
+An inversion is a kind of forward reasoning step that allows
+for users to extract all useful information contained in a hypothesis.
+It is a case analysis over
+a given hypothesis according to its specific arguments,
+that removes absurd cases,
+introduces relevant premises in the environment and performs suitable
+substitutions in the whole goal.
+The practical need for automating inversion has been identified 
+many years ago and most proof assistants (Isabelle, Coq, Matita,...) 
+provide an appropriate mechanism.
+
+% \margjf{3}{to be moved as a remark, after explaining the central line}
+% \jf{When some inversion steps are to be used repeatedly,
+% appropriate inversion lemmas can be prepared using}
+% \coqdockw{Derive Inversion};
+% the generated inversion principle can be used with
+% the \coqdockw{inversion ... using} tactic.
+
+% If \coqvartt{I} is the inductive predicate and \margjf{2}{unfinished sentence}
+
+
+%When you want to perform \inversionon a hypothise \coqvartt{H},
+%which has form \textit{I t}. And \textit{I} is
+
+\subsection{Issue from \compcert C semantics}
+%Almost, need to re-read
+\compcert C semantics is a quite big and complex inductive relation. Each 
+constructor describes the memory state transformation of an expression,
+statement, or function.
+In the theorems we aim at proving,
+ARM instructions are represented by C functions containing
+a sequence of statements
+which can be decomposed into complicated expressions.
+As soon as
+we want to discover the relation between memory states before and after
+evaluating an expression, we have to invert hypotheses of operational semantics to
+follow the clue given by its definition.
+To perform such inverting we can use
+\inversion. But each use of \inversion will go one step only.
+
+For illustration, we present here a small excerpt from an old
+proof script in \simsoccert using \inversion, which belongs to
+the ADC instruction. It sets the CPSR with the value of SPSR.
+The pseudo-code from the ARM reference manual is just
+\texttt{CPSR = SPSR}.
+The corresponding C code is a call to function \texttt{copy\_StatusRegister},
+which sets CPSR field by field by the values from SPSR.
+Lemma \texttt{same\_cp\_SR} states that the C memory state of the simulator
+and the corresponding formal representation of ARM processor state
+evolve consistently during this assignment.
+\begin{alltt}
+Lemma same_copy_SR :
+  forall e m l b s t m' v em,
+  proc_state_related m e (Ok tt (mk_semstate l b s)) ->
+  eval_expression (Genv.globalenv prog_adc) e m expr_cp_SR t m' v ->
+  forall l b,
+  proc_state_related m' e
+   (Ok tt
+       (mk_semstate l b (Arm6_State.set_cpsr s (Arm6_State.spsr s em)))).
+   ).
+\end{alltt}
+
+After a couple of introductions and other administrative steps,
+we get the following goal, where \texttt{cp\_SR} is unfolded in hypothesis H.
+\texttt{cp\_SR} is the identifier of \compcert C representation, which
+calls to the function \texttt{copy\_StatusRegister} with arguments CPSR as
+setting destination and SPSR as source.
+
+\begin{alltt}
+  l' : local
+  b' : bool
+  a' : expr
+  H : eval_expr (Genv.globalenv prog_adc) e m RV
+         (Ecall (Evalof (Evar copy_StatusRegister T14) T14)
+            (Econs
+               (Eaddrof
+                  (Efield (Ederef (Evalof (Evar proc T3) T3) T6)
+                     adc_compcert.cpsr T7) T8)
+               (Econs
+                  (Ecall (Evalof (Evar spsr T15) T15)
+                     (Econs (Evalof (Evar proc T3) T3) Enil) T8) Enil))
+            T12) t m' a'
+  ============================
+   proc_state_related m' e st'
+\end{alltt}
+
+Then we have to invert \texttt{H} and similar generated hypotheses until
+all constructors used in its type are exhausted.
+Here 18 consecutive inversions are needed. Using \inv tactic invented by
+\compcert, 
+which performs standard \inversion, clearing the inverted hypothesis,
+and rewriting of all auxiliary equations,
+the sequel of the script started as follows:
+
+\begin{alltt}
+  inv H. inv H4. inv H9. inv H5. inv H4. inv H5. 
+  inv H15. inv H4. inv H5. inv H14. inv H4. inv H3. 
+  inv H15. inv H5. inv H4. inv H5. inv H21. inv H13.
+  ...
+\end{alltt}
+
+The old proof script includes a lot of code in this style,
+which makes the size of the code huge and hard to manage.
+
+% \margjf{1}{Provide some details, in 1 or 2 lines, explaining
+% which inductive relations are involved.
+% Refer to a previous chapter explaining Compcert-C semantics}
+% For a complex expression, we have to push \inversion many
+% times. Thereofre, we get proof scripts which are heavily filled with calls to 
+% \inversion.
+% \cjf{\bfseries \fbox{Good place for a picture}}
+
+Another problem is the management of names.
+A single \inversion will derive
+a dozen of variables and hypotheses according to the corresponding constructor
+in \compcert C formal semantics.
+% A complex one like \coqvartt{eval\_call} above,
+% inverting a hypothesis of this kind will return nineteen new variables 
+% and eight new hypotheses.
+% Giving names will be boring and repetitive.
+With Coq built-in \inversion, their names are automatically generated
+using consecutive numbers.
+This makes proof scripts highly dependent on such names.
+Such a feature is already not very good when writing the proof,
+because of the heavy use of inversions and the large number of new names
+generated each time.
+More importantly, 
+the maintenance of proof scripts becomes a terribly awful task:
+each use of those uncontrolled names has to be revisited
+either when the formal definition of the \compcert-C semantics
+changes (upgrading from \compcert 1.8 to 1.9 for instance)
+or when the algorithm of Coq for name generation is changed
+(this happened from Coq 8.3 to 8.4).
+To provide an idea of the burden,
+in our first experience using Coq built-in \inversion,
+the complete correctness proof on instruction ADC
+resulted in a file containing 2500 lines of proof scripts.
+Moreover, designing (and maintaining) the scripts was made uncomfortable by
+the compilation time of this file more than one minute 
+most of the time was spend on \inversion.
+Given that there are more than one hundred instructions in ARMv6 ISS,
+we considered it as urgent to find a replacement for Coq built-in
+\inversion.
+
+
+% \subsection*{Disadvantage of the traditional inversion}
+
+% So we conclude the disadvantage of using original \inversion:
+% \begin{itemize}
+% \item 
+% \end{itemize}
+
+
+\section{Design of \hcinv}
+%\margjf{2}{Say what hcf stands for: ``hand crafted'' smtg?}
+%Here \texttt{hc} is a shorthand for \texttt{hand-crafted}.
+Here \hcinv stands for \emph{hand-crafted inversion}.
+
+% \subsection{Inspiration: small inversion}
+
+% %most is copy from paper small_inv, need to change
+% Small inversion is a proof trick introduced in ~\cite{small_inv}.
+% It is able to perform the same as tactic \inversion in some cases.
+
+% \cjf{OK, you actually do what I wanted from Section \ref{sec:gen-design}.
+% So here, you should introduce the plan and make clear where is your
+% contribution.
+% BTW, an important part of your contrib is the implementation using LTAC.
+% The whole chapter should be longer and indeed can be much longer.
+% }
+
+% \cjf{\itshape(Obsolete comment) This subsection should present the trick, so that the whole section
+% is self-contained.
+% Focus on the main point, no need to detail recursive applications for instance.
+% And add what is insufficient in \cite{small_inv}.
+% Take material from the submitted paper!
+% }
+
+% \jf{$\vdots$}
+
+% \cjf{This conclusion should be put later, after Section \ref{sec:gen-design} at least}.
+% %
+% This technique is flexible and is available in several variants.
+% Comparing to regular \inversion, small inversion has also strong
+% elimination\margjf{3}{Explain in more detail, or remove}.
+% The differences between standard \inversion and small
+% inversion are: when we want to reduce recursively absurd hypotheses, standard
+% \inversion will repeat yields the recursive case until reach the
+% absurd case; small inversion is more intuitive
+% to change the goal directly to what it will become according to definition.
+% The printed version of proof terms of small inversion already shows a big
+% advantage from lines of code and the produced .vo file.
+% More examples are in ~\cite{small_inv}.
+
+\subsection{General design concept and example}
+\label{sec:gen-design}
+
+Small inversion is a proof trick introduced in ~\cite{small_inv}.
+It is able to perform the same as tactic \inversion in some cases.
+
+>From the idea of small inversion\cite{small_inv}, we have built a more
+powerful inversion through several improvements and validated it to
+realistic applications.  The following examples introduce our
+development step by step.  To make it easy to understand, we choose a
+well known example about even defined for Peano's natural number. Its
+inductive definition is :
+
+\begin{alltt}
+Inductive even_i : nat -> Prop :=
+  | E0 : even_i 0
+  | E2 : forall n, even_i n -> even_i (S (S n)).
+\end{alltt}
+
+As explained in ~\cite{small_inv}, the main idea is to build the
+corresponding auxiliary diagonalization function.
+
+% \cjf{You often use sentence like the previous one, with a \emph{it}
+% which refers to nothing.
+% I think that you mean something like:\\
+% ``As explained in ~\cite{small_inv}, the way is to build the
+% corresponding auxiliary diagonalization function''.\\
+% Or better:\\
+% ``As explained in ~\cite{small_inv}, the main idea is to build the
+% corresponding auxiliary diagonalization function''.
+% }
+
+First, the inductive predicate \coqvartt{even\_i} is a dependent data type.
+
+% \margjf{5}{say why you write that: interactive construction of \texttt{match} is more convenient}
+Using primitive tactics \coqdockw{case} or
+\coqdockw{destruct} is powerful enough
+to perform dependent pattern matching on an assumption of type
+\coqvartt{even\_i n}
+when the conclusion of the current goal shares the
+same arguments as the hypothesis to be case analyzed.
+If not so,
+one cannot return the desired new goal with the converted arguments
+by using only \coqdockw{case} or \coqdockw{destruct}
+
+% \cjf{``powerful enough''... for what? Do you mean:}
+
+% \jf{In order to perform dependent pattern matching on an assumption
+% of type \coqvartt{even\_i n},
+% we can use
+% the primitive tactics \coqdockw{case} or \coqdockw{destruct},
+% which automatically find suitable terms for the \coqdockw{return}
+% clause of the \coqdockw{match} construct.}
+%
+Assume there are two proof terms \coqvartt{t0} and \coqvartt{t2} for
+constructors \coqvartt{E0} and \coqvartt{E2}. The two proof terms have
+different types. The type of \coqvartt{t0} is \coqvartt{P 0},
+the type of \coqvartt{t2} is \coqvartt{P (S (S n))}.
+Therefore, the syntax of the \coqdockw{match} construct contains a
+\coqdockw{return}
+clause with the expected type of the result \coqvartt{P n} as an argument;
+moreover, there
+is also an \coqdockw{in} clause for the type of \coqvartt{H} which binds
+\coqvartt{n}:
+
+% \noindent\cjf{A sentence is missing here, for introducing the next term in the \texttt{allttt} paragraph.}
+%
+\begin{alltt}
+match H in even_i n return P n with
+  | E0 => t0
+  | E2 e ex => t2
+end
+\end{alltt}
+
+Assuming a hypothesis \coqvartt{H} of type \coqvartt{even\_i n}
+and a conclusion of type \coqvartt{P n}, both sharing variable \coqvartt{n},
+then applying a case analysis
+on \coqvartt{H} will build a proof term in the same form
+as the code above and generate two new sub-goals \coqvartt{P 0} and
+\coqvartt{P (S (S x))} with the additional assumption \coqvartt{even\_i x}.
+
+%\st{When}
+Sometimes, there is no obvious relation between the hypothesis and conclusion.
+For example, %\st{we have a}
+consider the following lemma: $even\_i~1 \rightarrow 3=4$,
+%\st{The inductive predicate} \coqvartt{even\_i} \st{has parameter} \coqvartt{1}.
+%\st{But}
+where the conclusion ($3 = 4$)
+%\st{has nothing to do with parameter} \coqvartt{1}.
+is not related to the argument of \coqvartt{even\_i} (1).
+As mentioned before, our interactive destruct works only if the hypothesis we
+want to destruct and the conclusion share the same argument.
+In order to fix this, we have to convert the conclusion of the current goal into
+a function of $1$. We define a diagonalization function
+\coqvartt{diag} which matches the key parameter and returns the
+conclusion of the current goal:
+
+\begin{alltt}
+let diag x :=
+  match x with
+    | 1 => 3 = 4
+    | _ => True
+  end in
+  match H in even_i n return diag n with
+    | E0 => I
+    | E2 _ _ => I
+  end
+\end{alltt}
+%\cjf{{\rm\coqvartt{concl}} concl \rm is not a constant \(\rightarrow\) use a different font}
+
+Then a case analysis on \coqvartt{H} will return two sub-goals: \coqvartt{diag 0},
+and \coqvartt{diag (S (S y))} ending up with a proof term
+for \coqvartt{True}.
+
+% \cjf{Revoir: diag 1 is not proved, it has to be  (and actually is) convertible
+% with the conclusion of the current goal.
+% Reprhase the whole previous explanation, saying the interactive destruct
+% works if the goal has the shape
+% \texttt{even 1 |- something 1}}
+
+%% \herejf %%
+
+However, the technique explained in the previous section has to be extended in
+order to cover more general situations.
+
+The first improvement we have to provide is to make the diagonalization function
+independent from specific conclusion if we want it to be used for any possible
+goal. We use $\forall X:Prop$ instead of a specific conclusion to hook the
+current conclusion.
+Then the previous diagonalization function will be replaced.
+% by:\\
+%\begin{center}
+%$diag~x~:=~\coqdockw{match}~x~\coqdockw{with}~1 \Rightarrow \forall(X:Prop),~X\mid \_ \Rightarrow True~\coqdockw{end}$\\
+%\end{center}
+Then together with the previous proof term of type $\forall X,X$,
+it is able to apply any conclusion:
+\begin{alltt}
+let diag x :=
+  match x with
+    | 1 => forall X : Prop, X
+    | _ => True
+  end in
+  match H in even_i n return diag n with
+    | E0 => I
+    | E2 _ _ => I
+  end
+\end{alltt}
+
+The second is to consider a positive case.
+Let us consider the following theorem as an example,\\
+\begin{center}
+$\forall n~m, \coqvartt{even\_i n} \rightarrow \coqvartt{even\_i (n+m)}
+\rightarrow \coqvartt{even\_i m}.$
+\end{center}
+The proof is led by induction on \coqvartt{even\_i n}.
+According to the constructor of inductive type \coqvartt{even\_i},
+induction generates two
+sub-goals: \coqvartt{even\_i (0 + m)} and \coqvartt{even\_i (S (S (n + m))}.
+The first is easy to solve.
+Then an induction hypothesis will be added to the local context:
+$even\_i~(n + m) \rightarrow even\_i~m$.
+If we want to continue, we need a link from
+\coqvartt{S (S (n + m))} to \coqvartt{n + m}, and it is exactly
+the second constructor \coqvartt{E2} of inductive type \coqvartt{even\_i}.
+So we expect our technique could also express the premise of the focused
+constructor.
+We propose a new \coqvartt{diag} function and proof
+term defined as follows:
+\begin{alltt}
+let diag x :=
+  match x with
+    | S (S y) => forall X: Prop, (even_i y -> X) -> X
+    | _ => True
+  end in
+  match H in even_i n return diag n with
+    | E2 p e => fun X k => k e
+    | _ => I
+  end
+\end{alltt}
+
+Then, applying the new technique in current hypothesis $H:~even\_i(S(S(n~+~m)))$
+yields a function in continuation passing style.
+The type parameter \coqvartt{X} identified to the conclusion
+\coqvartt{even\_i m}; then \coqvartt{y} binds to \coqvartt{n + m},
+and the goal converts to $even\_i~(n + m) \rightarrow even\_i~m$.
+That is exactly what we expected.
+Our inversion function can be seen as inversion lemmas, but their type is the
+dependent type expressed by their own \coqvartt{diag}.
+The difference between our diagonalization function and the Coq built-in
+\coqdockw{Derive Inversion} will be introduced at the end of this section.
+
+To summarize this new diagonalization function, when there is an inductive type
+$\coqvartt{I}(\coqvartt{t})$,
+where \coqvartt{t} is the parameter of type \coqvartt{T},
+and $\coqvartt{C}_i$ is a constructor of \coqvartt{I} depending on
+parameter $\coqvartt{t}_i$ of type \coqvartt{T},
+\coqvartt{pi} is the premise in constructor $\coqvartt{C}_i$,
+$\mathcal{P}$ consists of a constructor of type \coqvartt{T},
+we want to filter.
+Then a constructor of the inductive type \coqvartt{I(t)} containing $\mathcal{P}$
+can be expressed like
+$\coqvartt{C}_i:\forall ~\coqvartt{p}_i,~\coqdocvar{I}~\mathcal{P}$.
+And \coqvartt{HI} is the hypothesis of type \coqvartt{I(t)} we want to invert.
+In the general case, we have to consider if there are more than one possible
+constructors containing $\mathcal{P}$, like constructor $C_i$, $C_j$, etc.
+The inverting lemma corresponding to $\coqvartt{A}\mathcal{P}$ is:
+
+\begin{alltt}
+let diag x :=
+  match x with
+    | P => forall X: Prop, (forall pi, X) ... (forall pj, X) -> X
+    | _ =>  True
+  end in
+  match HI in I t return diag t with
+    | Ci ei => fun X ki => ki ei
+    ...
+    | Cj ej => fun X kj => kj ej
+    | _ => I
+  end
+\end{alltt}
+Remark the close relationship with the impredicative encoding of data types in
+system~F.
+
+Next, we consider more than one parameter in an inductive type.
+The difference when we have more parameters is that using the previous inverting
+strategy, the identifiers for the same variable in premise and conclusion
+cannot be related.
+This problem was discovered when applying our inverting technique
+to the \simsoccert project.
+Let us introduce a new example in order to explain the problem properly.
+Here is a toy language that accepts two operations:
+\coqvartt{tm\_const} and \coqvartt{tm\_plus}.
+The output type \coqvartt{val} is a natural number
+or a Boolean.
+The evaluation (\coqvartt{eval}) takes an argument of type \coqvartt{tm}
+and returns a value of type \coqvartt{val}.
+The Coq code is as follows:
+
+\begin{alltt}
+Inductive tm : Type :=
+  | tm_const : nat -> tm
+  | tm_plus : tm -> tm -> tm.
+
+Inductive val : Type :=
+  | nval  : nat -> val
+  | bval  : bool -> val.
+
+Inductive eval : tm -> val -> Prop :=
+  | E_Const : forall n,
+      eval (tm_const n) (nval n)
+  | E_Plus : forall t1 t2 n1 n2,
+      eval t1 (nval n1) ->
+      eval t2 (nval n2) ->
+      eval (tm_plus t1 t2) (nval (plus n1 n2)).
+\end{alltt}
+
+In the inductive type \coqvartt{eval},
+the constructor \coqvartt{E\_Plus} has four
+variables: \coqvartt{t1}, \coqvartt{t2}, \coqvartt{n1}, and \coqvartt{n2}.
+The premises and the conclusion share these variables.
+Without special care
+we lose the information of relationship of sharing.
+
+Let us consider a theorem,
+$$\forall v,~\coqvartt{eval}(\coqvartt{tm\_plus}(\coqvartt{tm\_const}~1)~(\coqvartt{tm\_const}~0))~v~\rightarrow ~v~=~\coqvartt{nval}~1.$$
+The diagonalization function corresponding to the previous method is:
+\begin{alltt}
+match x with
+  | tm_plus tc1 tc2 =>
+      forall X: Prop,
+      (forall n1 n2, eval tc1 (nval n1) -> eval tc2 (nval n2) -> X) -> X
+  | _ => True
+end
+\end{alltt}
+But then, the fact that \coqvartt{v} should be
+\coqvartt{nval (plus n1 n2)} is not recorded.
+The solution is to add a parameter to \coqvartt{X} to keep this identification
+after evaluation. The modified diagonalization function for the constructor
+\coqvartt{E\_Plus} is:
+\begin{alltt}
+match x with
+  | tm_plus tc1 tc2 =>
+      forall X: tm -> Prop,
+        (\(\forall\) n1 n2, eval tc1 (nval n1) ->
+                  eval tc2 (nval n2) -> X (nval (plus n1 n2))) -> X v
+  | _ => True
+end
+\end{alltt}
+
+This example also introduces another problem we had not foreseen: a
+constructor may have more than one diagonalization function.
+Considering the same theorem as above, after inverting
+\coqvartt{E\_Plus}, the current proof goal is:
+\begin{alltt}
+n1 : nat
+n2 : nat
+e1 : eval (tm_const 0) (nval n1)
+e2 : eval (tm_const 1) (nval n2)
+============================
+ nval (n1 + n2) = nval 1
+\end{alltt}
+We expect inverting e1 and e2 can give us the nat value of \coqvartt{n1} and
+\coqvartt{n2}.
+Without any consideration, we defined the diagonalization function
+for \coqvartt{E\_Const} like this,
+\begin{alltt}
+match t with
+  | tm_const n => forall (X: val -> Prop), X (nval n) -> v
+  | _ => True
+end
+\end{alltt}
+It chooses to keep the value for type \coqvartt{val}.
+Then we notice in current conclusion there is no \coqvartt{nval n1} or
+\coqvartt{nval n2} but \coqvartt{nval (n1 + n2)}.
+The previous diagonalization function is not able to get the value of
+\coqvartt{n1} or \coqvartt{n2}.
+The diagonalization function should focus on a variable of type \coqvartt{nat}
+instead of \coqvartt{val}.
+The pattern matching should match both input and output parameters of
+\coqvartt{eval}.
+\begin{alltt}
+match t, v with
+  | tm_const tc, nval n => forall (X: nat -> Prop), X tc -> n
+  | _, _ => True
+end
+\end{alltt}
+
+In summary, the diagonalization function is defined depending upon
+what conclusion we have.
+When we have a conclusion like in this example, we choose
+the second diagonalization function.
+If the conclusion contains only \coqvartt{nval n}, we can choose the first one.
+
+% % JF -> XM: only relevant to \cite{small_inv}, obsolete here.
+% The differences between standard \inversion and small
+% inversion are: when we want to reduce recursively absurd hypotheses, standard
+% \inversion will repeat yielding the recursive case until reach the
+% absurd case; small inversion is more intuitive
+% to change the goal directly to what it will become according to definition.
+% The printed version of proof terms of small inversion already shows a big
+% advantage from lines of code and the produced .vo file.
+% More examples are in ~\cite{small_inv}.
+
+% \subsection {Improvement during correctness proving}
+
+% The development of \hcinv step by step applied to inverting one constructor
+% of type eval\_expr in \compcert-C semantics. It is eval\_call which specifies
+% the big-step evaluation of function call.
+
+% First try: we use similar technique as small inversion.
+% When it is the default case, we return a series conjunction of equalities
+% in order to keep the consistency of parameter values.
+% Else, it returns \coqvartt{False}.
+
+% \subsection{Key parameters decision}
+
+% A very important point in this inversion technique is the key parameter. It is
+% the one we focus on to decide which case is it in the corresponding inductive
+% definition.
+% How to choose this key parameter is the subject of this section.
+% The type of a inductive relation indicates the necessary parameters.
+% And the case analyze always depend on one of these parameters.
+% Then such parameter is the main key we are looking for.
+% In the given example \coqvartt{eval}, the key parameter is of type \textbf{tm}.
+% When it is \coqvartt{tm\_const}, it is in case \coqvartt{E\_Const}.
+% When it is \coqvartt{tm\_plus}, it is in \coqvartt{E\_Plus}.
+% But in some situation, only one key parameter is not enough.
+
+
+
+\subsection{Using our hand-crafted inversion in SimSoC-Cert}
+\label{ssec:invssc}
+% \cjf{Much more details needed.
+% Insist on the gain in \emph{manageability} and on \emph{flexibility},
+% in a framework where full automation is not reachable,
+% so we need interactive proofs with good control.
+% Explain the ``howto'' write high-level tactics.}
+
+We use the new inversion to define a new inversion tactic \coqvartt{inv\_[expr]} 
+for inductive type \coqvartt{eval\_expr} in \compcert.
+The semantics of \compcert C tells us how the memory state 
+is transformed by evaluating expressions (Section~\ref{ssec:ccc}).
+Like explained in the previous subsection,
+an auxiliary function has to be defined for each constructor of
+\coqvartt{eval\_expr}.
+
+First, we define the diagonal-based function for each constructor
+of $eval\_expr$, following the lines given in the previous section.
+For example, 
+the evaluation of a field is defined in \compcert by the following rule.
+\begin{alltt}
+Inductive eval_expr :
+  env -> mem -> kind -> expr -> trace -> mem -> expr -> Prop :=
+  ...
+  | eval_field : \(\forall\) e m a t m’ a’ f ty,
+      eval_expr e m RV a t m’ a’ ->
+      eval_expr e m LV (Efield a f ty) t m’ (Efield a’ f ty)
+\end{alltt}
+
+We then define (observe that 2 variables and 1 hypothesis will be generated):
+\begin{alltt}
+Definition inv_field {g} {e} {m} {ex} {t} {m'} {ex'}
+  (ee:eval_expr g e m LV ex t m' ex') :=
+  let diag e ex ex' m m' :=
+    match ex with
+      | Efield a b c =>
+        \(\forall\) (X:expr->Prop),
+        (\(\forall\) t a', eval_expr g e m RV a t m' a' -> X (Efield a' b c)) -> X ex'
+      | _ => True
+    end in
+    match ee in (eval_expr _ e m _ ex _ m' ex')
+             return  diag e ex ex' m m'  with
+      | eval_field _ _ _ t _ a' _ _ H1 =>   fun X k => k t a' H1
+      | _ => I
+    end.
+\end{alltt}
+
+Every instruction contains a quite complex expression.
+If we want to find the
+relation between the memory states affected by these expressions,
+we have to invert many times
+even if we use the new \hcinv.
+These steps are repetitive, applying the right diagonal-based functions
+with the same pair of memory states as parameters to the focused hypothesis.
+
+Using the \texttt{match goal} construct of LTac,
+we can define a high-level tactic for each inductive type,
+gathering all the functions defined for its constructors.
+For example, the inversion tactic for $\coqvartt{eval\_expr}$ contains:
+
+\begin{alltt}
+Ltac inv_eval_expr m m' :=
+  ...
+  let t1_:=fresh "t" in
+  let v1_:=fresh "v" in
+  let ev_ex1 := fresh "ev_ex" in
+  ...
+  match goal with
+  ...
+    | [ee: eval_expr ?ge ?e m LV (Efield ?a ?f ?ty) ?t m' ?a' |- ?cl] =>
+      apply (inv_field ee); clear ee; intros t1_ a1_ ev_ex1; intros;
+      inv_eval_expr m m'
+\end{alltt}
+
+This tactic has two arguments $\coqvartt{m}$ and $\coqvartt{m'}$,
+corresponding to C memory states.
+The first \texttt{intros} introduces the 3 generated components 
+with names respectively prefixed by \coqdoccst{t}, \coqdoccst{v} and \coqdoccst{ev\_ex}.
+The second \texttt{intros} is related to previously reverted 
+hypotheses, their names are correctly managed by Coq.
+The tactic proceeds as follows:
+\begin{itemize}
+\item 
+it automatically finds the hypothesis we want
+to invert by matching the targetted memory states;
+\item 
+related hypotheses are reverted;
+\item 
+the right auxiliary function is called
+(all auxiliary functions are gathered in the tactic);
+\item 
+meaningful names are given to derived variables and hypotheses;
+\item 
+all other related hypotheses are updated according to the new names
+and new values;
+\item 
+useless variables and hypotheses are cleaned up ;
+\item 
+the steps above are repeated until all transitions between
+the two targetted memory states are discovered. 
+\end{itemize}
+\noindent
+We name this tactic \coqvartt{inv\_eval\_expr};
+all inversions on hypotheses of type \coqvartt{eval\_expr} are replaced by
+\coqvartt{inv\_eval\_expr}.
+%
+For example, 18 standard \inv were used in the old proof script of 
+lemma \texttt{same\_copy\_SR}.
+With the high-level tactic, the 18 \inv can be replaced by one step:
+\texttt{inv\_eval\_expr~m~m'}.
+
+Inverting a hypothesis of type \coqvartt{eval\_expr} may introduce new
+hypotheses on internal memory states according to the premises 
+in the definition of the constructor.
+% % JF: the way you put sentences one after the other is
+% % hard (impossible) to follow. I don't understand what you do
+% %  - introducing an new topic
+% %  - explain the previous sentence, or add details related to the 
+% %  - or ?
+% %  You should use "joining words" such as "therefore", "moreover", "but"
+% %  And also, use structure in the paragraphs (new paragraphs, itemize, etc.). 
+% % Here I guess something, it may be wrong. Please check.
+% % I also suggest that you give more code in \coqvartt{inv\_eval\_expr}
+% % in order to illustrate your informal comments (in contrast with
+% % a conference paper, you have room). 
+%
+% % I dont' understand if your "next" here refers to something wich is
+% % computed in the tactic and automatically inverted,
+% % or if it is soemthing for the next interaction of the user
+% % (ie.e., in the script of the lemma).
+% % Intuitively I believe that it is the 2nd. 
+% 
+% To find which is the next to invert is not random. 
+% This is because of automatic name giving process. 
+% reference [AAA] (used below)
+The automatic naming scheme in our tactic provides useful clues
+which are helpful in the script of a proof.
+%
+% % JF: I'm confused here. Do you mean that we get an explicit equality,
+% % i.e., a hypothesis containing an equality ? 
+% % And then you use a rewrite step ?
+% % Hard to believe. I tend to think that such equalities are implicit,
+% % they come from identifications of arguments in the inductive relation
+% % which is inverted.
+% % It corresponds to base cases if the inductive relation.
+%
+% To invert those hypotheses containing internal memory state,
+% sometimes we get an equality between two states
+% $\coqvartt{m}_{i1}~=~\coqvartt{m}_{i2}$.
+% Then $\coqvartt{m}_{i1}$ will be replaced by $\coqvartt{m}_{i2}$.
+%
+Sometimes, inverting a hypothesis will identify two memory states
+$\coqvartt{m}_{i1}$ and $\coqvartt{m}_{i2}$.
+Then $\coqvartt{m}_{i1}$ is automatically replaced by $\coqvartt{m}_{i2}$.
+%
+% % XM (hard to understand for JF)
+% If the memory state we use to find the
+% hypothesis to invert is replaced by its following state,
+% it is not possible to continue our automatic process.
+% The inversion order of hypotheses is go backward in order to avoid the memory
+% state parameter is replaced. 
+% % JF (Again I try something which may be wrong)
+%
+Such replacements trouble the automatic process in our tactic,
+because the first memory state $\coqvartt{m}_{i1}$ is used
+for finding the next hypothesis to be inverted.
+This issue is solved by inverting hypotheses in backward order.
+
+% % JF redundant with [AAA] above
+% Note that the names are not explicitly given in the script,
+% which would be cumbersome.
+% They are generated in our tactic.
+
+% % JF redundant
+% This ad-hoc tactic is a wrapper for all inverting diagonalization functions.
+%
+Our \hcinv makes it possible to have a convenient automatic naming algorithm
+because the arguments that need to be named are fixed and
+are known directly from the inductive type definition itself. 
+It does not work with standard inversion because,
+other than the arguments and premise of the inductive definition itself,
+extra equalities may be introduced and 
+% % JF : don't understand
+% the order preservation of their order may not accurate.
+hypotheses may be reordered in a way which is not under our control.
+
+
+
+
+\subsection{Comparing \hcinv with Coq built-in inversions}
+\label{ssc:adinv}
+
+
+\sloppy
+There are three Coq built-in tactics that can achieve inverting the
+hypothesis of current proof goal.  
+They are the standard
+\inversion, \coqdoctac{Derive Inversion}, 
+and \coqdoctac{dependent induction/destruction}.
+We already discussed the tactic \inversion. 
+The tactic \coqdoctac{Derive Inversion} allows
+the user to first automatically generate an inversion principle according to
+an inductive type and then to apply it to inverting target.
+The tactics \coqdoctac{dependent induction} and 
+\coqdoctac{dependent destruction}
+are another option for inverting inductive predicate instances and
+potentially doing induction at the same time. They are based on
+BasicElim of Conor McBride~\cite{mcbride96}
+and work by abstracting each argument of an inductive instance 
+by a variable and constraining it by suitable equalities.
+The usual induction and destruct tactics can then be applied
+to the abstracted instance and after rewriting of the equalities,
+we get the expected goals.
+\fussy
+
+\paragraph{Ease of use.}
+If we compare these three options, without considering
+the issues on name control,
+\coqdoctac{Derive Inversion} is the most inconvenient one.
+It finds the clues according to type definition of inverted hypothesis,
+without telling which one it matches and the returned premises are not
+introduced.
+% >>>>>>> variant A
+\compcert defines \coqdoctac{inv} as a combination of 
+the standard \inversion with substitution and clearing.
+% which makes the proof script short. 
+So for a basic usage, it is not complicate to use.
+% applicative complexity point of view, 
+We think \coqdoctac{BasicElim} is easier to use 
+than the two other built-in tactics.
+New equalities hypotheses will be rewritten 
+and existing premises of equation can be kept by a block.
+It handles the recursive type definition. 
+% % JF: Don't understand (syntax) but does not seem that important
+% The name of the inverting target is passed to its inductive premise of the same type. 
+
+If we take name control issues into account,
+both \coqdoctac{Derive Inversion} and \coqdoctac{BasicElim} are hard 
+to use. 
+% That is because they are not able to find the corresponding
+% constructor by only applying themselves to inverting an inductive
+% type.
+% This is because nothing is provided to To give names, we have
+% to consider all cases of the inductive type.
+Names have to be provided for all cases given by the constructors.
+For example, we have to consider 16 cases for \coqvartt{eval\_expr}.
+Even if we just use a wild-card in impossible cases,
+15 wild-cards are still needed for them,
+as well as extra tactics for concluding.
+
+\medskip
+% Due to the changes between different \compcert
+% versions, we have to change all the proofs related to those
+% changes first. That is a quite large work. But now we only have to change
+% the \hcinv definitions.  During developing our project, it also saves
+% time for less modification when you want to ameliorate the existing
+% proof script.
+The price we have to pay for gaining controllability and
+accurate management of names is that \hcinv has to be updated
+with each release of \compcert.
+This requires some work.
+But as expected, proof scripts themselves are robust, 
+changes occur only in the definitions related to \hcinv.
+In our developments,
+after \hcinv became available,
+proof scripts could also be improved much more easily,
+achieving a good separation of concerns between the design of proofs
+and technical issues on inversion.
+
+% >>>>>>> variant B
+% The CompCert defined \coqdoctac{inv} combines the standard \inversion with
+% subs-traction and clearing, which makes the proof script shorter. From the
+% applicative complexity point of view, it is not complicate to use.
+% We think \coqdoctac{BasicElim} is better than the two.
+% New equivalent hypotheses can be
+% rewritten and existing premises of equation can be kept by a block.
+% And it focuses on the recursive type definition. The name of the
+% inverting target is passed to its inductive premise of the same type.
+
+% Then we take naming control into account. Both \coqdoctac{Derive
+%   Inversion} and \coqdoctac{BasicElim} are hard to apply then, because
+% they are not able to find the corresponding constructor by only
+% applying themselves to inverting an inductive type. To assign names, we
+% have to consider all cases of the inductive type. For example, we have
+% to consider all 16 cases for type \coqvartt{eval\_expr}. Even if we
+% only place wild-card for impossible cases, there are 15 wild-cards to
+% make.  And extra tactics are needed to deny the unmatched
+% constructors.
+
+% The other price to pay is the generated proof terms of the other
+% three.  Comparing the compilation results (in Table ~\ref{t:size})
+% shows the advantage of using our \hcinv. Although built-in tactic
+% \coqdoctac{Derive Inversion} has better timing of type-checking, the
+% compiled output (.vo file) is the biggest, four times comparing to the
+% other built-in ones, ten times comparing to \hcinv.
+
+% Especially for inverting the complex types in CompCert-C, using \hcinv
+% is much more efficient. Due to the changes between different CompCert
+% versions, we had to change all the proofs related to those
+% changes first. That is a quite large work. But now we only have to change
+% the \hcinv definitions.  During development of our project,
+% it made it easier to maintain the existing proof scripts.
+
+% We take one lemma from correctness proof of instruction ADC to compare three
+% kinds of inversion tactics: \inversion, \coqdoctac{Derive Inversion\_clear},
+% and our inversion \hcinv.
+% This lemma discusses the memory state change between expressions including
+% \coqvartt{Econdition}, \coqvartt{Ebinop}, \coqvartt{Evalof}, \coqvartt{Eval},
+% and \coqvartt{Evar}~\ref{t:timing}.
+% We compare the time used by performing each inversion and the size of output
+% object files (.vo) by compilation ~\ref{t:size}.
+% %%Test comparison results is needed here
+% ======= end
+
+\paragraph{Performance.}
+
+\begin{table}[t]
+\centering
+\caption{Time costs (in seconds)}
+\label{t:timing}
+\begin{tabular}{|l|c|c|c|c|}
+\hline
+ & standard \inversion & \coqdoctac{Derive Inversion} & \coqdoctac{BasicElim} & our inversion \\
+\hline
+%Full example & 1.628102 & 0.976061 & 1.428089 & 0.31202 \\
+Full example & 1.628 & 0.976 & 1.428 & 0.312 \\
+\hline
+%Ecall & 0.132009 & 0.076004 & 0.112007 &  0.028002\\
+Ecall & 0.132 & 0.076 & 0.112 &  0.028\\
+\hline
+%Evalof &  0.132008 & 0.072004 & 0.092005 & 0.020001\\
+Evalof &  0.132 & 0.072 & 0.092 & 0.020\\
+\hline
+%Evar &  0.128008 & 0.064004 & 0.084006 & 0.024001\\
+Evar &  0.128 & 0.064 & 0.084 & 0.024\\
+\hline
+%Eaddrof &  0.140009 & 0.076005 & 0.104007 & 0.020001\\
+Eaddrof &  0.140 & 0.076 & 0.104 & 0.020\\
+\hline
+\end{tabular}
+\end{table}
+
+
+\begin{table}[t]
+\centering
+\caption{Size of compilation results (in KBytes)}
+\label{t:size}
+\begin{tabular}{|l|c|c|c|c|}
+\hline
+ & standard \inversion & \coqdoctac{Derive Inversion} & \coqdoctac{BasicElim} & our inversion \\
+\hline
+%Full example & 191346 & 459613 & 170821 & 36712\\
+Full example & 191 & 460 & 171 & 37\\
+\hline
+\end{tabular}
+\end{table}
+
+% % JF -> XM: take care of the order of your paragraphs!
+% % You put conclusion and speak about tables, 
+% % then say what are the tables about. I have to reverse that
+
+% The other price to pay is the generated proof terms of the other
+% three.  Comparing the compilation results (in Table ~\ref{t:size})
+% shows the advantage of using our \hcinv. Although built-in tactic
+% \coqdoctac{Derive Inversion} has the advantage in timing of
+% type-checking, the compiled output (.vo file) is the biggest, four
+% times comparing to the other built-in ones, ten times comparing to \hcinv.
+Another clear advantage for our \hcinv is efficiency.
+Proof terms generated by \hcinv are much smaller than by the three
+built-in tactics, as shown on examples taken in \simsoccert,
+see Tables~\ref{t:timing} and~\ref{t:size}).
+The comparison is performed
+on a lemma taken from the correctness proof of instruction ADC.
+This lemma discusses how the memory state changes 
+during the evaluation of expressions including
+\coqvartt{Econdition}, \coqvartt{Ebinop}, \coqvartt{Evalof}, \coqvartt{Eval},
+and \coqvartt{Evar}.
+% We consider the three built-in inversion tactics
+% (\inversion, \coqdoctac{Derive Inversion\_clear})
+% and our inversion \hcinv.
+We compare the time used for performing each inversion in Table~\ref{t:timing},
+and the size of output object files (.vo) in Table~\ref{t:size}. 
+
+We see that \hcinv consumes 4 to 5 times less space than \inversion and 
+\coqdoctac{BasicElim}, and 10 times less than
+\coqdoctac{Derive Inversion\_clear}.
+%
+Consistently, and more importantly for the user who heavily uses inversions,
+\hcinv reacts much faster (3 to 6 times).
+%
+Note that, in our experiments, 
+\coqdoctac{Derive Inversion} has a better response time
+among the three built-in inversion tactics,
+but it generates the biggest .vo files.
+
+% % JF \hcinv may be much more efficient on less inductive types as well,
+% % we don't know.
+% Especially for inverting the complex types in \compcert-C, using \hcinv
+% is much more efficient. 
+%
+
+
+
+%720KB derive_inversion.vo   84KB new_inversion.vo
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\paragraph{Inversions out of reach of built-in tactics.}
+% Beating \inversion
+%\label{sec:beatinv}
+
+Let us now consider a predicate defined on a dependent type.
+We take intervals $[1...n]$, formalized as $t$ in the standard library \texttt{Fin},
+and then we restrict them to have an odd length.
+
+\begin{alltt}
+Inductive t : nat -> Set :=
+  | F1 : forall {n}, t (S n)
+  | FS : forall {n}, t n -> t (S n).
+
+Inductive odd : forall n : nat, t n -> Prop :=
+  | odd\_1 : forall n, odd (S n) F1
+  | odd\_SS : forall n i, odd n i -> odd \_ (FS (FS i)).
+\end{alltt}
+
+%\medskip
+%\coqdocinput{chunk60}
+%\medskip
+
+\noindent
+Finding the premises for the second constructor is a function 
+similar to the one provided for $E2$ above:
+
+%\medskip
+%\coqdocinput{chunk61}
+%\medskip
+
+\begin{alltt}
+Definition premises\_odd\_SS {n} {i: t n} (of: odd n i) :=
+  let diag n i :=
+    match i with
+      | FS \_ (FS \_ y)  => forall (X: Prop), (odd \_ y -> X) -> X
+      | \_ => True 
+    end in
+  match of in odd n i return diag n i with
+      | odd\_SS n i o => fun X k => k o
+      | \_ => I
+  end.
+\end{alltt}
+
+\noindent
+In particular we can easily prove:
+
+%\medskip
+%\coqdocinput{chunk62}
+%\medskip
+
+\begin{alltt}
+Lemma odd_SS_inv: forall n i, odd _ (FS (FS i)) -> odd n i.
+Proof.
+  intros n i o. apply (premises_odd_SS o). trivial.
+Qed.
+\end{alltt}
+
+\noindent
+Standard \inversion happens to fail here.
+Note that BasicElim may work (we actually could not succeed)
+but would need an additional axiom related to John Major equality.
+
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "thesis"
+%%% End: 

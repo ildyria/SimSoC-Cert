@@ -1,0 +1,412 @@
+% ----------------------------------------------------------------------
+%                   LATEX TEMPLATE FOR PhD THESIS
+% ----------------------------------------------------------------------
+
+% based on Harish Bhanderi's PhD/MPhil template, then Uni Cambridge
+% http://www-h.eng.cam.ac.uk/help/tpl/textprocessing/ThesisStyle/
+% corrected and extended in 2007 by Jakob Suckale, then MPI-CBG PhD programme
+% and made available through OpenWetWare.org - the free biology wiki
+
+
+%: Style file for Latex
+% Most style definitions are in the external file PhDthesisPSnPDF.
+% In this template package, it can be found in ./Latex/Classes/
+\documentclass[twoside,11pt]{PhDthesisPSnPDF}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+%\usepackage[english,french]{babel} % already in PhDthesisPSnPDF
+%switching can be done with \selectlanguage{english} \selectlanguage{french}
+
+%: Macro file for Latex
+% Macros help you summarise frequently repeated Latex commands.
+% Here, they are placed in an external file /Latex/Macros/MacroFile1.tex
+% An macro that you may use frequently is the figuremacro (see introduction.tex)
+%\include{Latex/Macros/MacroFile1}
+
+\usepackage[toc,page]{appendix}
+\usepackage{listings}
+
+\theoremstyle{plain}
+\newtheorem{thm}{Theorem}[chapter] % reset theorem numbering for each chapter
+\newtheorem{lemma}{Lemma}[chapter] % reset lemma numbering for each chapter
+
+\theoremstyle{definition}
+\newtheorem{defn}[thm]{Definition} % definition numbers are dependent on theorem numbers
+\newtheorem{exmp}[thm]{Example} % same for example numbers
+
+\usepackage{comment}
+
+% Without resume in French
+% \excludecomment{resume}
+% With resume in French
+\includecomment{resume}
+
+%: ----------------------------------------------------------------------
+%:                  TITLE PAGE: name, degree,..
+% ----------------------------------------------------------------------
+% below is to generate the title page with crest and author name
+
+%if output to PDF then put the following in PDF header
+\ifpdf
+    \pdfinfo { /Title  (PhD and MPhil Thesis Classes)
+               /Creator (TeX)
+               /Producer (pdfTeX)
+               /Author (Xiaomu SHI xiaomu_shi@hotmail.com)
+               /CreationDate (D:20120401000000)  %format D:YYYYMMDDhhmmss
+               /ModDate (D:YYYYMMDDhhmm)
+               /Subject (xyz)
+               /Keywords (add, your, keywords, here) }
+    \pdfcatalog { /PageMode (/UseOutlines)
+                  /OpenAction (fitbh)  }
+\fi
+
+
+%\title{Formalisation and Proofs for an Instruction Set Simulator}
+
+
+
+% ----------------------------------------------------------------------
+% The section below defines www links/email for author and institutions
+% They will appear on the title page of the PDF and can be clicked
+\ifpdf
+  \author{\href{mailto:xiaomu_shi@hotmail.com}{Xiaomu SHI}}
+%  \cityofbirth{born in XYZ} % uncomment this if your university requires this
+%  % If city of birth is required, also uncomment 2 sections in PhDthesisPSnPDF
+%  % Just search for the "city" and you'll find them.
+  \collegeordept{\href{http://http://edmstii.ujf-grenoble.fr}{Mathématiques, Sciences et Technologies de l'Information, Informatique}}
+  \university{\href{http://www.doctoralschool.ofGrenoble}{Universit\'e de Grenoble}} %\marginpar{update href}
+
+  % The crest is a graphics file of the logo of your research institution.
+  % Place it in ./0_frontmatter/figures and specify the width
+  %\crest{\includegraphics[width=4cm]{logo}}
+
+% If you are not creating a PDF then use the following. The default is PDF.
+\else
+  \author{Shi Xiaomu}
+%  \cityofbirth{born in XYZ}
+  \collegeordept{CollegeOrDept}
+  \university{Universit\'e de Grenoble}
+  %\crest{\includegraphics[width=4cm]{logo}}
+\fi
+
+%\renewcommand{\submittedtext}{change the default text here if needed}
+\degree{Philosophi\ae Doctor (PhD)}
+\degreedate{2013 July}
+
+
+% ----------------------------------------------------------------------
+
+% turn of those nasty overfull and underfull hboxes
+\hbadness=10000
+\hfuzz=50pt
+
+
+%: --------------------------------------------------------------
+% User-defined macros
+
+\usepackage{extarrows}
+\usepackage{soul}
+\usepackage{multirow}
+\usepackage{listings}
+\setstcolor{red}
+
+\setlength{\marginparwidth}{20mm}
+\let\oldmarginpar\marginpar
+\renewcommand\marginpar[1]%
+  {\-\oldmarginpar[\raggedleft\footnotesize\itshape #1]%
+                  {\raggedright\footnotesize\itshape #1}}
+\newcommand{\byjf}{\textbf{[JF]}}
+\newcommand{\jf}[1]{\textcolor{red}{#1}}
+\newcommand{\cjf}[1]{\jf{\byjf{} #1}}
+\newcommand{\herejf}{\jf{\itshape [Read until here by JF]}}
+\newcommand{\margjf}[2]{\textcolor{blue}{$^{[#1]}$}%
+                        \marginpar{\textcolor{blue}{%
+                           {\vspace*{-0\baselineskip} $^{#1}$\byjf{} #2
+      }}}}
+\newcommand{\byxm}{\textbf{[XM]}}
+\newcommand{\xm}[1]{\textcolor{cyan}{#1}}
+\newcommand{\cxm}[1]{\xm{\byxm{} #1}}
+\newcommand{\margxm}[2]{\textcolor{cyan}{$^{[#1]}$}%
+                        \marginpar{\textcolor{cyan}{%
+                           {\vspace*{-0\baselineskip} $^{#1}$\byxm{} #2
+      }}}}
+
+\newcommand{\stt}{\small\tt}
+
+
+\newcommand{\hide}[1]{}
+
+
+
+%:-------------------------- Naming macro -----------------------
+
+\newcommand{\hcinv}{\texttt{hc\_inversion}\xspace}
+\newcommand{\inversion}{\coqdockw{inversion}\xspace}
+\newcommand{\inv}{\coqdockw{inv}\xspace}
+\newcommand{\simlight}{\texttt{Simlight}\xspace}
+\newcommand{\why}{\texttt{Why}\xspace}
+\newcommand{\whyML}{\texttt{WhyML}\xspace}
+\newcommand{\whyCert}{\texttt{WhyCert}\xspace}
+\newcommand{\framac}{\texttt{Frama-C}\xspace}
+\newcommand{\jessie}{\texttt{Jessie}\xspace}
+\newcommand{\compcert}{\texttt{CompCert}\xspace}
+\newcommand{\clight}{\texttt{Clight}\xspace}
+\newcommand{\simsoc}{\texttt{SimSoC}\xspace}
+\newcommand{\simsoccert}{\texttt{SimSoC-Cert}\xspace}
+
+% la ligne ci-dessous est à insérer obligatoirement dans le préambule du document avant \begin{document}
+
+\usepackage[a4paper]{meta-donnees}
+
+%: --------------------------------------------------------------
+%:                  FRONT MATTER: dedications, abstract,..
+% --------------------------------------------------------------
+
+\begin{document}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%             Commandes Meta-données               %%
+%%   à renseigner par les auteurs pour générer      %%
+%%     la couverture modèle Univ. Grenoble          %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%      Fichier encodé au format ISO-8859-16        %%
+
+%\Sethpageshift{???mm}   %%optionnel : à décommenter si besoin pour ajout d'espace afin de center la couvérture horizontalement (valeur par défaut est -5.5mm)
+%\Setvpageshift{???mm}   %%optionnel : à décommenter si besoin pour ajout d'espace afin de center la couvérture verticalement (valeur par défaut est -15.5mm)
+
+
+%\Universite{}    %%optionnel : à décommenter et à renseigenr si vous voulez changer le non d'université
+%\Grade{}         %%optionnel : à décommenter et à renseigenr si vous voulez changer le grade
+\Specialite{Informatique}
+\Arrete{7 août 2006}
+\Auteur{Xiaomu SHI}
+\Directeur{Jean-Fran\c{c}ois MONIN}
+\CoDirecteur{Vania JOLOBOFF}    %%optionnel : à décommenter et à renseigenr si présence d'un Co-directeur de thèse
+\Laboratoire{VERIMAG}
+\EcoleDoctorale{Math\'{e}matiques, Sciences et Technologies de l'Information, \mbox{Informatique}}
+\Titre{Certification of an \\ Instruction Set Simulator}
+%\Soustitre{}      %%optionnel : à décommenter et à renseigenr si présence d'un sous-titre de thèse
+\Depot{10 juillet 2013}
+
+
+% Commande pour création de nouvelles catégories dans le jury:
+
+%\UGTNewJuryCategory{...NomDeLaCategorie...}{...Definition...}
+
+% Exemple \UGTNewJuryCategory{UGTFamille}{Membre de la famille} que nous ajoutons dans la commande \Jury ci-dessous sous la forme \UGTFamille{Jean Rousseau}{(...titre_et_affiliation...s'il_y_en_a...)}
+
+
+\Jury{
+%\UGTPresident{...Civilité, Prénom\_et\_Nom...}{...titre\_et\_affiliation...}
+%\UGTPresidente{...Civilité, Prénom\_et\_Nom...}{...titre\_et\_affiliation...}
+
+\UGTExaminateur{M. Yves Bertot}{Directeur de Recherche, INRIA Sophia-Antipolis}  
+%% 1er examinateur
+\UGTRapporteur{Mme Sandrine Blazy}{Professeur, IRISA}
+%% 1er rapporteur
+\UGTCoDirecteur{M. Vania Joloboff}{Directeur de Recherche, LIAMA}
+%% Co-Directeur de thèse s'il y en a
+\UGTExaminateur{M. Xavier Leroy}{Directeur de Recherche, INRIA Rocquencourt}     
+%% second examinateur
+\UGTExaminateur{M. Laurent Maillet-Contoz}{Ingénieur, STMicroelectronics}
+%\UGTExaminatrice{...Civilité, Prénom\_et\_Nom...}{...titre\_et\_affiliation...}
+\UGTRapporteur{M. Claude Marché}{Directeur de Recherche, INRIA Saclay %
+- Île-de-France et LRI}      %% second rapporteur
+\UGTDirecteur{M. Jean-François Monin}{Professeur, Université de Grenoble 1 UJF}
+%% Directeur de thèse
+
+%% 3ème examinateur
+\UGTExaminateur{M. Frédéric Rousseau}{Professeur, Université de Grenoble 1 UJF}
+%% 4ème examinateur
+
+
+%\UGTInvite{...Civilité, Prénom\_et\_Nom...}{...titre\_et\_affiliation...}
+%\UGTInvitee{...Civilité, Prénom\_et\_Nom...}{...titre\_et\_affiliation...}
+}
+
+\MakeUGthesePDG    %% très important pour générer la couvérture de thèse
+
+
+%\language{english}
+
+% sets line spacing
+\renewcommand\baselinestretch{1.2}
+\baselineskip=18pt plus1pt
+
+
+%: ----------------------- generate cover page ------------------------
+
+%\maketitle  % command to print the title page with above variables
+
+
+%: ----------------------- cover page back side ------------------------
+% Your research institution may require reviewer names, etc.
+% This cover back side is required by Dresden Med Fac; uncomment if needed.
+
+% \newpage
+% \vspace{10mm}
+% 1. Reviewer: Name
+
+% \vspace{10mm}
+% 2. Reviewer:
+
+% \vspace{20mm}
+% Day of the defense:
+
+% \vspace{20mm}
+% \hspace{70mm}Signature from head of PhD committee:
+
+
+
+%: ----------------------- abstract ------------------------
+
+% Your institution may have specific regulations if you need an abstract and where it is to be placed in the document. The default here is just after title.
+
+%\include{abstract}
+
+% The original template provides and abstractseparate environment, if your institution requires them to be separate. I think it's easier to print the abstract from the complete thesis by restricting printing to the relevant page.
+% \begin{abstractseparate}
+%   \input{Abstract/abstract}
+% \end{abstractseparate}
+
+
+%: ----------------------- tie in front matter ------------------------
+
+\frontmatter
+%\include{dedication}
+%\include{acknowledgement}
+
+
+%: ----------------------- contents ------------------------
+
+\setcounter{secnumdepth}{3} % organisational level that receives a numbers
+\setcounter{tocdepth}{3}    % print table of contents for level 3
+\tableofcontents            % print the table of contents
+% levels are: 0 - chapter, 1 - section, 2 - subsection, 3 - subsection
+
+
+%: ----------------------- list of figures/tables ------------------------
+
+
+\listoffigures	% print list of figures
+
+\listoftables  % print list of tables
+
+
+%: ----------------------- glossary ------------------------
+
+% Tie in external source file for definitions: /0_frontmatter/glossary.tex
+% Glossary entries can also be defined in the main text. See glossary.tex
+%\include{glossary}
+
+%\begin{multicols}{2} % \begin{multicols}{#columns}[header text][space]
+%\begin{footnotesize} % scriptsize(7) < footnotesize(8) < small (9) < normal (10)
+
+%\printnomenclature[1.5cm] % [] = distance between entry and description
+%\label{nom} % target name for links to glossary
+
+%\end{footnotesize}
+%\end{multicols}
+
+
+
+%: --------------------------------------------------------------
+%:                  MAIN DOCUMENT SECTION
+% --------------------------------------------------------------
+
+% the main text starts here with the introduction, 1st chapter,...
+\mainmatter
+
+%\renewcommand{\chaptername}{} % uncomment to print only "1" not "Chapter 1"
+
+
+%: ----------------------- subdocuments ------------------------
+
+% Parts of the thesis are included below. Rename the files as required.
+% But take care that the paths match. You can also change the order of appearance by moving the include commands.
+\include{acknowledgements}
+\include{introduction}
+% \include{related}
+% \include{simsoc}
+\include{background}
+\include{formal}
+\include{interp}
+\include{framework}
+\include{correctness}
+\include{inversion}
+\include{other}
+\include{conclusion}
+\include{vf}
+
+\begin{appendices}
+\include{appendixADC}
+\include{appendixproofscriptADC}
+\end{appendices}
+
+% \include{8/materials_methods}
+
+
+
+
+% --------------------------------------------------------------
+%:                  BACK MATTER: appendices, refs,..
+% --------------------------------------------------------------
+
+% the back matter: appendix and references close the thesis
+
+
+%: ----------------------- bibliography ------------------------
+
+% The section below defines how references are listed and formatted
+% The default below is 2 columns, small font, complete author names.
+% Entries are also linked back to the page number in the text and to external URL if provided in the BibTex file.
+
+% PhDbiblio-url2 = names small caps, title bold & hyperlinked, link to page
+%\begin{multicols}{2} % \begin{multicols}{ # columns}[ header text][ space]
+%\begin{tiny} % tiny(5) < scriptsize(7) < footnotesize(8) < small (9)
+
+%\bibliographystyle{Latex/Classes/PhDbiblio-url2} % Title is link if provided
+%\renewcommand{\bibname}{References} % changes the header; default: Bibliography
+
+% adjust this to fit your BibTex file
+
+%\end{tiny}
+%\end{multicols}
+
+% --------------------------------------------------------------
+% Various bibliography styles exit. Replace above style as desired.
+
+% in-text refs: (1) (1; 2)
+% ref list: alphabetical; author(s) in small caps; initials last name; page(s)
+%\bibliographystyle{Latex/Classes/PhDbiblio-case} % title forced lower case
+%\bibliographystyle{Latex/Classes/PhDbiblio-bold} % title as in bibtex but bold
+%\bibliographystyle{Latex/Classes/PhDbiblio-url} % bold + www link if provided
+
+%\bibliographystyle{Latex/Classes/jmb} % calls style file jmb.bst
+% in-text refs: author (year) without brackets
+% ref list: alphabetical; author(s) in normal font; last name, initials; page(s)
+
+%\bibliographystyle{plainnat} % calls style file plainnat.bst
+% in-text refs: author (year) without brackets
+% (this works with package natbib)
+
+
+% --------------------------------------------------------------
+
+% according to Dresden med fac summary has to be at the end
+%\include{0_frontmatter/abstract}
+
+%: Declaration of originality
+%\include{declaration}
+
+
+
+\nocite{*}
+\bibliographystyle{abbrv}
+\bibliography{biblio}
+
+
+\end{document}

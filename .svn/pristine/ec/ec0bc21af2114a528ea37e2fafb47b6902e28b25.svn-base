@@ -1,0 +1,99 @@
+
+----------------------- REVIEW 1 ---------------------
+PAPER: 71
+TITLE: Certified Simulation: What You Get Is What You Want
+AUTHORS: Vania Joloboff, Jean-Francois Monin and Xiaomu Shi
+
+OVERALL EVALUATION: -2 (reject)
+REVIEWER'S CONFIDENCE: 4 (high)
+
+----------- REVIEW -----------
+Summary
+-------
+
+The authors outline an approach for verifying the Instructuon Set Simulation (ISS) of the ARM V6 architecture using a tool chain consisting of the Coq theorem prover, the Compert-C formally-verified compiler for the C language, and SimSoC, a System-on-Chip system simulator.   They construct a formal model of the ARM archictecture (in Coq) from the architecture reference manuals, they obtain a formalisation of the (ISS) in Coq using the tool-chain proposed, and then agrue that they show a correspondence between the two using the Coq theorem prover (where the two formalisations are embedded).
+
+General Comments
+---------------
+
+The work presented appears to be laborious and worthwhile.  However I am arguing for rejection because there are three major flaws in this work:
+
+1.   The paper is poorly written, badly structured and riddled with typos. I found it very hard to understand what the aim of the work really is. The issues discussed in the introduction are largely orthogonal to the work carried out  and distracting. The same applies to most of the material in the related work section (e.g. the discussions dealing with the merits/demerits of axiomatic and operational semantics).   Figures are poorly explained (eg Fig 4 and Fig 2), as are some code snippets (eg pg 10 top), the English used is very inconsistent and often hard to parse, and the chapters seem to be disjointed and patched up  (eg there are some repeated explanations/definitions, e.g. ISS in Sec 2 and then again in Sec 3.)
+ 
+2. They fail to motivate and describe well the core concepts underlying the proof methodology.  For instance, they never discuss what type of equivalence relation they are considering (as far as I can deduce it is some form of simulation) and why it is appropriate for their setting (again, as far as I can tell, it turns out to be adequate because the authors assume - without proving it - that the semantics on both sides is deterministic); see Fig 1.   
+  
+3.  The validity of the work carried out (see the setup depicted in Fig 3) relies on the correctness of two premises:
+    a) the correctness of the projection function that relates the memory model in the ISS formalisation (called concrete state) to the memory model of the ARM formal model (called abstract state).  This relation was poorly described and never justified.  
+    b) the correctness of the ARM formal model was constructed by hand from the informal descriptions found in the reference manuals.  Again, the authors  give little information on the process used to construct this model, nor do they give any justification as to why this formal model is correct itself.  I would have expected some form of validation of this model.
+
+Specific Comments
+---------------
+
+pg 1. abstract. "initial algorithm'' --> use different terminology
+pg 1 ln -18, replace ";'' with ''but''
+pg 1 ln -10. However...  --> bad english.
+pg 1 ln -3 "but not so well''  and  "changes a little bit'' --> reword.
+pg 2 ln 1.  Cannot follow the logic of the sentence here.
+pg 2 ln 5,6.  --> bad english.
+pg 2 ln 10, part after the semicolon.  --> sentence is too long and the english makes little sense.
+pg 2 ln 18 "sequel'' --> use a different word.
+pg 2 Related Work.  It may make more sense to shift this to the end of the paper, so as to be able to relate the work carried out in the paper better.  Also the whole comparison between axiomatic and operational semantics seems irrelevant and is poorly executed.
+pg 3. ln 1,2,3,4: why is it not relevant to the setting of the paper?  The justifications given are quite obscure.
+pg 3 para 3.  The authors need to expand this section and compare their formalisations and results with the work in [15].  Do they obtain similar results? Do you improve upon them? [15] Could also be a way how to validate the validate the (abstract) formal model of correctness constructed by hand.
+pg 4. ln -7 Texas Instruments --> why is this relevant?
+pg 4. ln -1 "Our work introduces a new ISS for the ARM architecture'' --> is this a contribution of the paper?  How does it compare to existing ones?  why was there a need to introduce a new one?
+pg 5. ln 2 "simulatoris'' --> "simulator is''
+pg 7 ln 7 "semantics functions" --> semantic functions.
+pg 7 ln 9,10,11:  why is performance an issue?  I thought the main focus of the work is correctness.  
+pg 7 ln 9,10,11: bad sentence structure.
+pg 8 para 1.  What guarantees are there that the formal model constructed is correct? 
+pg 9 Fig 4. Hard to understand what is happening here.  Please document better.
+pg 9. the discussion focusses on how the two kids of memory (abstract and concrete) work.  It should focus instead on how they are related (despite their clear differences).
+pg 10. ln 4-13: How is this code snippet relevant to the discussion that follows?
+pg 10. ln 15.  Why does big-step semantics suffice?  Please motivate.
+pg 10. ln 18. "is yeilding'' --> yields
+pg 10. ln 24.  Capitalise "the''
+pg 10, pg 11.  What form of Big Step semantics is being used?  These change substantially from point to point (eg the one on pg 10 seems to have an effect, whereas the one on pg 11 does not) (eg the rules in pg 10 evaluate to another memory, but those on pg 11 evaluate to  a value)
+pg 11. pt 2.  I could not match the formal statement with what was being discussed in the surrounding paragraph.
+pg 11. pt 3. Are "register_related'' and "rn_related'' the same thing?
+pg 11. pt 3. the formalisation.  I would expect M' to be related to a derivative of rn instead of rn itself.  Maybe I missed something.
+pg 12. ln 15,16. CPSR and SPSR have never been introduced before, nor explained.
+pg 12 ln -11 space before full-stop.
+pg 12 ln -3 "hypothesis, the'' --> "hypothesis. The''
+pg 13 para 1.  Discussion seems redundant.  If anything, this should be outlined in the background section.
+pg 13 ln -26 "...''   remove.
+pg 13 ln -22  space before full-stop.
+pg 14 ln 23 "we did our best'':  better validation is needed here.
+pg 14 ln 29 "3.3'' --> "Section 3.3''
+
+
+----------------------- REVIEW 2 ---------------------
+PAPER: 71
+TITLE: Certified Simulation: What You Get Is What You Want
+AUTHORS: Vania Joloboff, Jean-Francois Monin and Xiaomu Shi
+
+OVERALL EVALUATION: 1 (weak accept)
+REVIEWER'S CONFIDENCE: 3 (medium)
+
+----------- REVIEW -----------
+The paper discusses a formal procedure for certifying the correctness of a simulated execution of a C program. To achieve this the procedure relies on the use of a verified compiler for converting C code into machine instructions for an ARM processor. Then a formal representation is created of the semantics of the ARM instruction set, based on the ARMv6 reference manual.
+The paper is well written and clearly explains the steps needed to perform the certification procedure. Many other aspects are necessarily left undiscussed. How, for instance, do we know if an actual ARM chip also conforms to the specifications from the ARMv6 reference manual, and how does timing and real-time performance affect the results. (One could also quibble a little with the title of the paper, because it seems to imply that we can be certain that the users always know (and can formally state) what they 'want.' They sometimes want to know also what their informal statement of 'wants' implies in undesirable features that they would get if they get what they want.... But it is quite reasonable for the paper not to go into these more philosophical details of course.)
+
+
+----------------------- REVIEW 3 ---------------------
+PAPER: 71
+TITLE: Certified Simulation: What You Get Is What You Want
+AUTHORS: Vania Joloboff, Jean-Francois Monin and Xiaomu Shi
+
+OVERALL EVALUATION: -1 (weak reject)
+REVIEWER'S CONFIDENCE: 3 (medium)
+
+----------- REVIEW -----------
+This paper presents a proof of correctness of a ARM instruction-set simulator using Coq.  The instruction-set simulator is a C program that is semi-automatically extracted from the ARM documentation.  The Coq model is constructed by hand from the same documentation, and encodes the operational semantics of ARM instructions.  The proof of correspondence conducted in Coq amounts to showing that the implemented (C) instruction-set simulator produces results for each instruction that match those produced by Coq.
+
+The paper motivates this work by remarking on the need for instruction-set-level verification for (distributed, embedded) applications.  The motivation is rather abstract, as no examples are cited of errors that could have been caught if verification at the instruction-set level were present.
+
+I also wondered about the repeated reference to "the semantics of C".  My concern is not with the notion of semantics, but that of C, since there are many different variants (many with hardware-specific extensions) that are used in practice.
+
+In the end, while the theorem-proving effort seems to be competent and well-done, I had trouble understanding precisely what problem it was intended to solve.
+

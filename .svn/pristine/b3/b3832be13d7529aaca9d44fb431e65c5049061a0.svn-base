@@ -1,0 +1,13 @@
+\begin{coqdoccode}
+\coqdocindent{4.00em}
+\coqdockw{match} \coqdocvar{PE} \coqdoctac{in} \coqdocvar{even\_i} \coqdocvar{n} \coqdockw{return} \coqdocvar{P} \coqdocvar{n} \coqdockw{with}\coqdoceol
+\coqdocindent{5.00em}
+\ensuremath{|} \coqdocvar{E0} \ensuremath{\Rightarrow} \end{coqdoccode}
+$t_\EZ$ \coqdoceol \begin{coqdoccode}
+\coqdocindent{5.00em}
+\ensuremath{|} \coqdocvar{E2} \coqdocvar{e} \coqdocvar{ex} \ensuremath{\Rightarrow} \end{coqdoccode}
+$t_\ET$ \coqdoceol \begin{coqdoccode}
+\coqdocindent{4.00em}
+\coqdockw{end}\coqdoceol
+\coqdocnoindent
+\end{coqdoccode}

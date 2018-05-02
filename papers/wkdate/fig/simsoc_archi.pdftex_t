@@ -1,0 +1,55 @@
+\begin{picture}(0,0)%
+\includegraphics{fig/simsoc_archi.pdf}%
+\end{picture}%
+\setlength{\unitlength}{4144sp}%
+%
+\begingroup\makeatletter\ifx\SetFigFontNFSS\undefined%
+\gdef\SetFigFontNFSS#1#2#3#4#5{%
+  \reset@font\fontsize{#1}{#2pt}%
+  \fontfamily{#3}\fontseries{#4}\fontshape{#5}%
+  \selectfont}%
+\fi\endgroup%
+\begin{picture}(7469,5614)(-246,-4753)
+\put(6121,-4606){\makebox(0,0)[lb]{\smash{{\SetFigFontNFSS{14}{16.8}{\familydefault}{\mddefault}{\updefault}{\color[rgb]{0,0,0}: ad hoc}%
+}}}}
+\put(3106,-4606){\makebox(0,0)[lb]{\smash{{\SetFigFontNFSS{14}{16.8}{\familydefault}{\mddefault}{\updefault}{\color[rgb]{0,0,0}: interrupt request (IRQ)}%
+}}}}
+\put(766,-4606){\makebox(0,0)[lb]{\smash{{\SetFigFontNFSS{14}{16.8}{\familydefault}{\mddefault}{\updefault}{\color[rgb]{0,0,0}: TLM interface}%
+}}}}
+\put(2296,479){\makebox(0,0)[lb]{\smash{{\SetFigFontNFSS{14}{16.8}{\familydefault}{\mddefault}{\updefault}{\color[rgb]{0,0,0}PROCESSOR}%
+}}}}
+\put(2566,164){\makebox(0,0)[lb]{\smash{{\SetFigFontNFSS{14}{16.8}{\familydefault}{\mddefault}{\updefault}{\color[rgb]{0,0,0}MODEL}%
+}}}}
+\put(721,-961){\makebox(0,0)[lb]{\smash{{\SetFigFontNFSS{14}{16.8}{\familydefault}{\mddefault}{\updefault}{\color[rgb]{0,0,0}MMU}%
+}}}}
+\put(2926,-916){\makebox(0,0)[lb]{\smash{{\SetFigFontNFSS{14}{16.8}{\familydefault}{\mddefault}{\updefault}{\color[rgb]{0,0,0}ISS}%
+}}}}
+\put(5176,119){\makebox(0,0)[lb]{\smash{{\SetFigFontNFSS{14}{16.8}{\familydefault}{\mddefault}{\updefault}{\color[rgb]{0,0,0}INTERRUPT}%
+}}}}
+\put(5041,-151){\makebox(0,0)[lb]{\smash{{\SetFigFontNFSS{14}{16.8}{\familydefault}{\mddefault}{\updefault}{\color[rgb]{0,0,0}CONTROLLER}%
+}}}}
+\put(3241,-3796){\makebox(0,0)[lb]{\smash{{\SetFigFontNFSS{14}{16.8}{\familydefault}{\mddefault}{\updefault}{\color[rgb]{0,0,0}\em (e.g. DMA, UART, processor, ...)}%
+}}}}
+\put(406,344){\makebox(0,0)[lb]{\smash{{\SetFigFontNFSS{14}{16.8}{\familydefault}{\mddefault}{\updefault}{\color[rgb]{0,0,0}DYNAMIC}%
+}}}}
+\put(226, 74){\makebox(0,0)[lb]{\smash{{\SetFigFontNFSS{14}{16.8}{\familydefault}{\mddefault}{\updefault}{\color[rgb]{0,0,0}TRANSLATOR}%
+}}}}
+\put(226,-2986){\makebox(0,0)[lb]{\smash{{\SetFigFontNFSS{14}{16.8}{\familydefault}{\mddefault}{\updefault}{\color[rgb]{0,0,0}SIMULATED}%
+}}}}
+\put(136,-3706){\makebox(0,0)[lb]{\smash{{\SetFigFontNFSS{14}{16.8}{\familydefault}{\mddefault}{\updefault}{\color[rgb]{0,0,0}TRANSLATION}%
+}}}}
+\put(406,-3256){\makebox(0,0)[lb]{\smash{{\SetFigFontNFSS{14}{16.8}{\familydefault}{\mddefault}{\updefault}{\color[rgb]{0,0,0}MEMORY}%
+}}}}
+\put(451,-3976){\makebox(0,0)[lb]{\smash{{\SetFigFontNFSS{14}{16.8}{\familydefault}{\mddefault}{\updefault}{\color[rgb]{0,0,0}CACHE}%
+}}}}
+\put(2161,-3886){\rotatebox{90.0}{\makebox(0,0)[lb]{\smash{{\SetFigFontNFSS{14}{16.8}{\familydefault}{\mddefault}{\updefault}{\color[rgb]{0,0,0}MEMORY}%
+}}}}}
+\put(2026,-2086){\makebox(0,0)[lb]{\smash{{\SetFigFontNFSS{14}{16.8}{\familydefault}{\mddefault}{\updefault}{\color[rgb]{0,0,0}BUS}%
+}}}}
+\put(3241,-3481){\makebox(0,0)[lb]{\smash{{\SetFigFontNFSS{14}{16.8}{\familydefault}{\mddefault}{\updefault}{\color[rgb]{0,0,0}\em INITIATOR TLM MODULES}%
+}}}}
+\put(3241,-3166){\makebox(0,0)[lb]{\smash{{\SetFigFontNFSS{14}{16.8}{\familydefault}{\mddefault}{\updefault}{\color[rgb]{0,0,0}\em OTHER TARGET  OR}%
+}}}}
+\put(  1,-2176){\rotatebox{90.0}{\makebox(0,0)[lb]{\smash{{\SetFigFontNFSS{14}{16.8}{\familydefault}{\mddefault}{\updefault}{\color[rgb]{0,0,0}DMI}%
+}}}}}
+\end{picture}%

@@ -1,0 +1,44 @@
+Material to be added here, as support to
+"Handcrafted Inversions Made Operational on Operational Semantics", 
+by JF Monin and SHI Xiaomu, submitted.
+
+This directory contains (or will soon contain):
+
+1) Simple scripts for illustrating our handcrafted inversion
+  - scripts for the examples given in the paper
+    (file paperscript.v)
+  - additional scripts, for fun (any other file XXX.v)
+
+2) Material related to SimSoC-cert, illustrating handcrafted inversion
+   in a much more complicated framework, using the operational semantics
+   of C defined in Compcert
+
+  - a file containing an excerpt of the C code from the SimSoC-cert project
+    (pieces_of_simlight_code.c)
+
+  - 2 tar gzipped directories for the relevant part of SimSoC-cert.
+
+    One is to be used with compcert 1.9 and Coq 8.3pl2 or 8.3pl4
+    (8.3plX, for any X>=2 probably works),
+    providing time and size comparisons with tactics of inversion available 
+    in Coq : inversion, derive inversion, implementation of McBride's
+    BasicElim.
+
+    The other is to be used with compcert 1.11 and Coq 8.4,
+    providing time comparisons only with with BasicElim:
+    the point is to show that maintenance is much easier with
+    our inversion, and we actually do not want to maintain scripts with
+    standard inversion.
+    Note that the Coq implementation of BasicElim includes a naming scheme
+    which happens to be rather convenient in this example: the name of the
+    inverted hypothesis is reused in such a way that we can conveniently
+    repeat the process using LTac; therefore, maintaining the script is
+    easier than with standard inversion. However a dozen of uncontrollable 
+    names appear on this example, so that maintenance is still an issue
+    with BasicElim.
+    In summary we don't use BasicElim in SimSoC-cert, because 
+    - it finally does not provide enough control on names
+    - it is slower
+    - And moreover, it uses unnecessary axioms.
+
+3) errata on the paper

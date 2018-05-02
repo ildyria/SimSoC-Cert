@@ -1,0 +1,187 @@
+The deadline for the final camera-ready version of your paper is
+Monday, April 22.
+
+
+----------------------- REVIEW 1 ---------------------
+PAPER: 34
+TITLE: Handcrafted Inversions Made Operational on Operational Semantics
+AUTHORS: Jean-Francois Monin and Xiaomu Shi
+
+OVERALL EVALUATION: 1 (weak accept)
+REVIEWER'S CONFIDENCE: 5 (expert)
+
+----------- REVIEW -----------
+Summary:
+
+This work presents a manual technique to perform inversion in Coq. The
+standard ready-to-use inversion tactic is known to be problematic
+because it generates very long proof terms, and very hard to maintain
+proofs, as names are generated automatically. In sharp contrast, the
+authors' technique gives full control to the proof developer.
+
+Recommendation:
+
+I'm accepting this work since I feel I learned how to handcraft
+inversion tactics after following the examples, and I feel I can use
+this knowledge in my own Coq scripts. As a Coq developer, I'm well
+aware of the pain induced by Coq's standard inversion tactic. Even
+more, the authors gracefully handle a somehow simple example where
+Coq's inversion tactic fails.
+
+That said, the work presents some issues that, to my eyes, weakens the
+claim of generality done by the authors.
+
+* TODO
+In particular, I have a hard time finishing the example presented in
+Section 3.4, as the inversion scheme needed for E_Const somehow falls
+out of the scheme presented in previous sections. I would like to see
+this example in full in the paper or, in the lack of space, at least
+refer to the reader to the accompanying code, adding the appropriate
+comment in the code.
+
+Also related to this, the general scheme the authors present in Section 3.3
+is valid only in unconstrained inductive types, so the claim stated at
+the beginning of Section 5,
+
+"Wee see no reason why the abovedeveloped technique [...] could not be
+automated",
+
+*DONE
+seems unsubstantiated. (BTW, abovedeveloped is not a word).
+
+*UNSURE
+As a last comment, Section 3.3 is hard to follow and needs to be
+fixed. The main reason is because the first part is still talking
+about absurd cases like in the previous subsection, so it should be
+moved there.
+
+Minor comments and typos:
+
+pxx.yy means page xx, paragraph yy.
+
+- IMHO the introduction would benefit from a short explanation of the method.
+*-p02.01: "specific specific".
+*-p02.03: missing stop between the first and the second sentence.
+*-p02.04: What is "too heavy" in this context?
+*-p03.03: "Rules E1 and E2". It should be E0. Also the typography is
+  not consistent with the rest of the section.
+*-p03.05: "because whose"
+TODO
+-p07.03: When it says "we proceed similarly" it's not clear similarly to what.
+*-p11.02: An iterated list of elements is written with a comma before
+the last element, as in "t1, ..., tn".
+
+
+----------------------- REVIEW 2 ---------------------
+PAPER: 34
+TITLE: Handcrafted Inversions Made Operational on Operational Semantics
+AUTHORS: Jean-Francois Monin and Xiaomu Shi
+
+OVERALL EVALUATION: 1 (weak accept)
+REVIEWER'S CONFIDENCE: 4 (high)
+
+----------- REVIEW -----------
+The paper gives a generalisation of Monin's "small inversions", describing the
+manual construction of the inversions through a few increasingly demanding
+examples, the application of them for a verification task in a real, practical
+setting and noting their advantages to the other available forms of inversion
+in Coq (better control of name generation, leading to more robust proofs;
+smaller proof terms; no extra axioms).
+
+The techniques are interesting and relevant.  The case study of applying the
+resulting inversions to verify the C implementation of a instruction set
+simulator using CompCert's executable semantics is compelling.
+
+However, many of the key details are vague:  The method of construction is
+partly left to examples, so it isn't clear how systematic it is, and whether
+it could be automated or if some essential handcrafting is generally required?
+
+The comparisons to other methods of inversion are mostly limited to noting
+problems, without giving any real insight into the core differences.  It also
+isn't clear which parts are new compared to the small inversions paper without
+reading that too.
+
+*ANSWER BY JF : no room for other techniques. Comparison with [9] improved.
+
+To give a more concrete example about comparing to other inversions, take the
+example in section 3.4.  Using the handcrafted inversion to help solve the
+given goal
+
+  forall v, eval (tm_plus (tm_const 1) (tm_const 0)) v -> v = nval 1
+
+works as advertised, but with
+
+  forall n, eval (tm_plus (tm_const 1) (tm_const 0)) (nval n) -> n = 1
+
+there's no suitable term in the conclusion to replace, whereas a standard
+inversion would generate an equality on n.  (Of course, you could add some
+equalities by hand, too...)  Similarly, the next section gives an
+example where other inversions fail but doesn't say why, and the case study
+provides an excellent opportunity for comparison, but only says a very small
+amount on p12.
+
+*ANSWER BY JF: the submitted paper is not complete. For this example
+use pr_plus_1_2 (or pr_tm_1_2 which follows suggestion of review 3)
+
+One final minor comment: On pages 7 and 8 you note the correspondence with
+impredicative data-type encodings, but given that it's interesting enough to
+mention in the abstract and the introduction, I think you really need to say
+something more concrete about the relationship.
+
+Comments about minor details:
+
+* p1  "there is few hope" - there is little hope
+* p4  "enforces to reason on" - forces us to reason on
+*     "sometimes worth to consider" - sometimes worth considering
+* p7  The first paragraph of section 3.3 seems rather disconnected from the rest
+*     of the section.
+* p11 "an small" - a small
+*    "ARM reference manual" ->the ARM reference manual
+* p15 "controlable" - controllable
+
+
+----------------------- REVIEW 3 ---------------------
+PAPER: 34
+TITLE: Handcrafted Inversions Made Operational on Operational Semantics
+AUTHORS: Jean-Francois Monin and Xiaomu Shi
+
+OVERALL EVALUATION: 2 (accept)
+REVIEWER'S CONFIDENCE: 4 (high)
+
+----------- REVIEW -----------
+This paper provides a methodology to craft inversion mechanisms in the
+Coq proof assistant.  The usefulness of the technique is demonstrated
+in the context of a large proof effort for the verification of a
+processor simulator written in C and verified on top of the CompCert
+framework.
+
+I found the paper interesting to read because
+1) the tackled problem is clearly difficult and relevant: maintaining 
+   large proof development that massively rely on inductive definitions.
+2) the proposed methodology is well explained.
+3) the experimental evaluation demonstrates a clear gain.
+4) it is always good to recall how the inversion tactic works behind
+    the curtain and be able to adapt manually some of them.
+
+But, I am quite frustrated by the following points
+i) The paper never clearly explains how the current inversion tactic works
+ii) I don't understand why we need a inverting lemma for each new expression. Many of them can be
+combined in a same lemma. For example:
+Definition pr {n} (en: even_i n) :=
+    let diag x := match x with
+                      | O => forall (X: Prop), X -> X
+                      | S (S n) => forall (X: Prop), (even_i n -> X) -> X 
+                      | _ => forall (X: Prop), X
+                  end in
+    match en in even_i n return diag n with
+        E0 => fun X h => h
+      | E2 n hn => fun X h => h hn
+    end.
+handles all examples of section 3.3 at the same time.
+
+In summary, the paper introduces a nice idea (impredicative encoding inside inversion
+lemmas) and a solid experimental evaluation. The presentation is not perfect at all
+but many readers will learn interesting lessons from this paper.
+
+
+

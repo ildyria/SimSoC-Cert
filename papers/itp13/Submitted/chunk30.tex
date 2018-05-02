@@ -1,0 +1,22 @@
+\begin{coqdoccode}
+\coqdocnoindent
+\coqdockw{Definition} \coqdocvar{premises\_E2} \{\coqdocvar{n}\} (\coqdocvar{en}: \coqdocvar{even\_i} \coqdocvar{n}) :=\coqdoceol
+\coqdocindent{2.00em}
+\coqdockw{let} \coqdocvar{diag} \coqdocvar{x} :=\coqdoceol
+\coqdocindent{3.00em}
+\coqdockw{match} \coqdocvar{x} \coqdockw{with} \coqdoceol
+\coqdocindent{4.00em}
+\ensuremath{|} \coqdocvar{S} (\coqdocvar{S} \coqdocvar{y}) \ensuremath{\Rightarrow} \coqdockw{\ensuremath{\forall}} (\coqdocvar{X}: \coqdockw{Prop}), (\coqdocvar{even\_i} \coqdocvar{y} \ensuremath{\rightarrow} \coqdocvar{X}) \ensuremath{\rightarrow} \coqdocvar{X}\coqdoceol
+\coqdocindent{4.00em}
+\ensuremath{|} \coqdocvar{\_} \ensuremath{\Rightarrow} \coqdocvar{True} \coqdoceol
+\coqdocindent{3.00em}
+\coqdockw{end} \coqdoctac{in}\coqdoceol
+\coqdocindent{2.00em}
+\coqdockw{match} \coqdocvar{en} \coqdoctac{in} \coqdocvar{even\_i} \coqdocvar{n} \coqdockw{return} \coqdocvar{diag} \coqdocvar{n} \coqdockw{with}\coqdoceol
+\coqdocindent{3.50em}
+\ensuremath{|} \coqdocvar{E2} \coqdocvar{p} \coqdocvar{e} \ensuremath{\Rightarrow} \coqdockw{fun} \coqdocvar{X} \coqdocvar{k} \ensuremath{\Rightarrow} \coqdocvar{k} \coqdocvar{e}\coqdoceol
+\coqdocindent{3.50em}
+\ensuremath{|} \coqdocvar{\_} \ensuremath{\Rightarrow} \coqdocvar{I}\coqdoceol
+\coqdocindent{2.00em}
+\coqdockw{end}.\coqdoceol
+\end{coqdoccode}

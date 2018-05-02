@@ -1,0 +1,275 @@
+\section{Introduction}
+\label{sec:intro}
+
+Type-theoretic settings such as Coq \cite{CoqManualV83,BC04,cpdt}
+offer two elementary ways of constructing new objects:
+functions and inductive types\footnote{%
+Co-inductive types are available as well. 
+However, this paper does not depend on issues related to finiteness
+of computations:
+what is said about inductive types holds as well for co-inductive types.
+}. 
+%\todo{Inductive are used for datatypes and relations, fixpoints for functions.}
+%
+For instance, even natural numbers can be inductively characterized 
+by the following two rules:
+
+\[
+\begin{prooftree}
+\using {\coqdocvar{E0}}
+\justifies\coqdocvar{even\_i}~ 0
+\end{prooftree}
+\qquad
+\begin{prooftree}
+\coqdocvar{even\_i}~ n
+\using {\coqdocvar{E2}}
+\justifies\coqdocvar{even\_i (S (S n))}
+\end{prooftree}
+\]
+
+
+%\coqdocinput{chunk1}
+
+\noindent
+Rule names such as \coqdocvar{E1} and \coqdocvar{E2}
+serve as canonical justifications for \coqdocvar{even\_i}, 
+they are called the \emph{constructors} of the inductive definition.
+
+Now, assume a hypothesis $H$ claiming
+that \coqdocvar{even\_i (S (S (S x)))} for some natural number $x$.
+Then, by looking at the definition of \coqdocvar{even\_i}, 
+we see that only \coqdocvar{E2} could justify $H$,
+and we can conclude that \coqdocvar{even\_i (S x)}.
+Similarly,  \coqdocvar{even\_i} 1 can be considered as an
+absurd hypothesis, since, as \coqdocvar{(S 0)} matches neither
+0 nor \coqdocvar{(S (S n))}, 
+none of the two possible canonical ways of proving \coqdocvar{even\_i},
+namely \coqdocvar{E0} and \coqdocvar{E2} can be used.
+Such proof steps are called \emph{inversions},
+because they use justifications such as \coqdocvar{E0} and \coqdocvar{E2}
+in the opposite way, i.e.,
+from their conclusion to their premises. 
+Note that \coqdocvar{even\_i} 3, \coqdocvar{even\_i} 5, etc. 
+do not immediately yield the absurd by inversion.
+However, by iterating the first inversion step, we eventually get
+\coqdocvar{even\_i} 1 and then the desired result using a last inversion.
+This illustrates that inversion is closer to case analysis than to induction.
+
+Indeed, as we will see below, 
+inversion can be decomposed in elementary proof steps,
+where the key step is a primitive case analysis on the considered
+inductive object (the hypothesis $H$, in our previous example). 
+However, this decomposition is very often far from trivial because,
+in the general case, rules include several premises,
+premises and conclusions may have several arguments and
+some of these arguments can be shared.
+Still, inversion turns out to be extremely useful in practice.
+Well-known instances are related to programming languages,
+because their semantics is described using complex inductively defined
+relations. 
+
+Note that, it may be worth considering a (recursive) \emph{function}
+for defining a predicate, rather than an inductive relation.
+For instance, in the Coq syntax, an alternative for even
+numbers is as follows:
+
+% Now, assume a goal containing a hypothesis $H$ claiming
+% that \coqdocvar{even\_i (S x)} for some natural number $x$.
+% Then, by looking at the definition of \coqdocvar{even\_i}, 
+% we can conclude that $x$ is \coqdocvar{(S y)}
+% for some $y$ satisfying \coqdocvar{even\_i y}.
+
+\medskip
+\coqdocinput{chunk11}
+\medskip
+
+\noindent
+Here \coqdocvar{True} denotes a trivially provable proposition,
+and \coqdocvar{False} denotes the absurd proposition.
+%
+Using \coqdocvar{even\_f} is much simpler in the previous situations:
+for instance, \coqdocvar{even\_f (S (S (S x)))} just \emph{reduces} to
+\coqdocvar{even\_f (S x)} using computation.
+In other words, computation provides inversion for free.
+Therefore, one may wonder why we should bother with inductively defined
+relations.
+Two kinds of answers can be given.
+
+One of them is that an inductive definition allows us 
+to focus exactly on the relevant values
+whereas, with functional definitions, 
+we have to deal with the full domain, 
+which can be much bigger in general.
+In our example above, 
+suppose that we want to prove a statement such as
+$\forall n, \mathit{even}\:n \impl P\: n$.
+We can always attempt an induction on $n$, 
+but this strategy enforces to reason on all numbers, 
+including odd numbers.
+If $\mathit{even}$ is encoded with \coqdocvar{even\_f},
+this is no other option.
+However, using \coqdocvar{even\_i}, 
+we have the additional opportunity to make an induction on 
+(the shape of) $\coqdocvar{even\_i}\;n$,
+without needing to bother about odd numbers.
+
+Another issue is that it is not always convenient or even possible to
+provide a functional definition of a predicate.
+Whenever possible,
+a $n$-ary relation $R$ on $A_1 \times \ldots A_n$, % with $n \ge 2$,
+is advantageously modeled by a function from $A_1, \ldots A_{n-1}$ to $A_n$.
+But it requires $R$ to be functional (deterministic) and moreover,
+in type-theoretical settings such as CIC, to be total.
+If the relation non-deterministic,
+we still can try to 
+define it by a function returning either \coqdocvar{True}
+or \coqdocvar{False}, as is the case for \coqdocvar{even\_f};
+this essentially amounts to provide a decision procedure for 
+the intended predicate\footnote{
+Note that a 1-ary relation $P$ on $A_1$ is isomorphic to a 
+binary relation on $\mathbf{1}\times A_1$,
+where $\mathbf{1}$ is a type with exactly one inhabitant.
+If $P$ holds for at least two values on $A_1$, 
+it can be clearly considered as a non-deterministic 
+function from $\mathbf{1}$ to $A_1$.
+}.
+This is not always possible and, even if we can find such an
+algorithm, it may be hindered by undesired encoding tricks,
+which will induce additional complications in proofs. 
+Moreover, a requirement of formal methods expresses that
+high-level definitions and statements should be as clear 
+as possible in order to be convincing. 
+The inductive style is not always the better than the functional
+style, but it is often enough the case so that we cannot
+ignore it. 
+For technical reasons, it is sometimes worth to consider a 
+a functional version and an inductive version of the same notion.
+Even if the functional version is much better at inversion-like
+proof steps, 
+the two versions have to be proved equivalent and there,
+the need for inverting the inductive version almost inevitably shows up.
+
+
+All these considerations are especially relevant in the case
+of the operational semantics of programming languages,
+either in small-step or in big-step style \cite{nielson}. 
+Such semantics define transitions between states,
+language constructs and,
+very often, additional arguments such as input/output events. 
+They are inductively defined, 
+with at least one rule for each language construct. 
+A tutorial example of a toy (but Turing-complete) language 
+formally defined in Coq along these lines
+is given in \cite{Pierce:SF}
+and routinely used as a teaching support in many universities.
+A much more involved example
+is the semantics of a fairly large subset of C, as defined in 
+the Compcert project \cite{Leroy-Compcert-CACM}.
+
+In the SimSoC-cert project \cite{cpp11}, 
+we use this semantics to perform proofs of 
+an instruction set simulator for ARM,
+which is at the heart of SimSoC~\cite{rapido11}, 
+a simulator of embedded systems written in C and C++.
+Many inversions are needed in our proofs.
+
+\medskip
+The practical need for automating inversion has been identified
+many years ago.
+The first implementations for Coq and LEGO
+are analyzed and explained in
+\cite{cornes95automating} for Coq
+and \cite{McBride96} for LEGO.
+Since then, the main tool proposed to the Coq user is
+a tactic called \inversion which,
+basically performs a case analysis over a given hypothesis
+according to its specific specific arguments,
+removes absurd cases,
+introduces relevant premises in the environment
+and performs suitable substitutions in the whole goal.
+%
+This tactic works remarkably well,
+though it fails in seldom intricate cases,
+as reported in mailing lists. 
+%
+However, the price to pay for its generality
+is a high complexity of the formal proof-term underlying
+an inversion. 
+Does it reflect an unnecessarily complex formalization of a 
+(at first sight) rather simple idea?
+Anyway, 
+beyond slowing down the evaluation of scripts which make
+an intensive use of this tactic, 
+a practical consequence is that
+unpleasantly heavy proof terms can unexpectedly occur in
+functions defined in interactive mode.
+
+More importantly, in our opinion, using this tactic
+introduces many new hypotheses in the environment.
+Their names are automatically generated
+and sequel of the script depends on them.
+Moreover such introduced hypotheses could be inverted again,
+and so on.
+This poses a problem of robustness which is very serious
+in large developments:
+updating the inductive relation or
+even minor modifications in another part of the development
+may result in a complete renaming 
+inside a proof script,
+which has then to be debugged line by line.
+The situation is better in recent version of Coq, 
+since \inversion can optionally be given the names of all hypotheses
+to be introduced.
+Still, their number and contents is hard to predict,
+which makes \inversion hardly usable in high-level tactics.
+
+In \cite{small_inv}, 
+the first author introduced a technique 
+for performing
+so-called \emph{small inversions}. 
+This technique is rather flexible and is available in several variants.
+Our goal was to demystify the magics behind \inversion
+and to propose a practical hand-crafted alternative
+to this tactic, 
+providing much smaller proof terms as well as
+a full control of the user on the behavior of inversion.
+The idea was illustrated only on very simple examples
+and had to be validated on realistic applications. 
+
+We report here such an experiment, 
+in the framework of the SimSoC-cert project introduced above.
+It turned out that significant changes had to
+be made in order to make the initial idea able
+to scale up.
+%
+The contributions presented here are then:
+\begin{itemize}
+\item an improvement of the main variant from \cite{small_inv},
+  which makes 
+  it is both simpler to use and more powerful;
+\item its illustration on a significant application,
+  which involves an intensive use of inversions on 
+  big inductive relations coming from the Compcert project.
+\end{itemize}
+
+The concrete setting considered here is the Coq proof assistant,
+but the technique can be adapted to any proof assistant based
+on the Calculus of Inductive constructions or a similar type theory, 
+such as LEGO, Matita or Agda.
+The rest of the paper is organized as follows.
+Section~\ref{sec:absurd}
+recalls the principle of small inversions as introduced in \cite{small_inv}.
+Section~\ref{sec:improvement} then explains its limitations
+and how to overcome them,
+while section~\ref{sec:simsoccert} contains a summary
+of the application to SimSoC-cert.
+We conclude in section~\ref{sec:conclusion} with a comment
+on our achievements and some perspectives.
+
+
+
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "cpp12"
+%%% End: 

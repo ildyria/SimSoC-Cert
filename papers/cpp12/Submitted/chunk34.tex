@@ -1,0 +1,28 @@
+\begin{coqdoccode}
+\coqdocnoindent
+\coqdockw{Definition} \coqdocvar{pr\_plus} \{\coqdocvar{t}\} \{\coqdocvar{v}\} (\coqdocvar{e}: \coqdocvar{eval} \coqdocvar{t} \coqdocvar{v}) :=\coqdoceol
+\coqdocindent{1.00em}
+\coqdockw{let} \coqdocvar{diag} \coqdocvar{t} \coqdocvar{v} :=\coqdoceol
+\coqdocindent{1.00em}
+\coqdockw{match} \coqdocvar{t} \coqdockw{with}\coqdoceol
+\coqdocindent{2.00em}
+\ensuremath{|} \coqdocvar{tm\_plus} \coqdocvar{t1} \coqdocvar{t2} \ensuremath{\Rightarrow} \coqdockw{\ensuremath{\forall}} (\coqdocvar{X}:\coqdocvar{val} \ensuremath{\rightarrow} \coqdockw{Prop}),\coqdoceol
+\coqdocindent{3.00em}
+(\coqdockw{\ensuremath{\forall}} \coqdocvar{n1} \coqdocvar{n2}, \coqdocvar{eval} \coqdocvar{t1} (\coqdocvar{nval} \coqdocvar{n1}) \ensuremath{\rightarrow}\coqdoceol
+\coqdocindent{10.50em}
+\coqdocvar{eval} \coqdocvar{t2} (\coqdocvar{nval} \coqdocvar{n2}) \ensuremath{\rightarrow}\coqdoceol
+\coqdocindent{10.50em}
+\coqdocvar{X} (\coqdocvar{nval} (\coqdocvar{plus} \coqdocvar{n1} \coqdocvar{n2}))) \ensuremath{\rightarrow} \coqdocvar{X} \coqdocvar{v}\coqdoceol
+\coqdocindent{2.00em}
+\ensuremath{|} \coqdocvar{\_} \ensuremath{\Rightarrow} \coqdocvar{True}\coqdoceol
+\coqdocindent{1.00em}
+\coqdockw{end}\coqdoceol
+\coqdocindent{1.00em}
+\coqdoctac{in} \coqdockw{match} \coqdocvar{e} \coqdoctac{in} (\coqdocvar{eval} \coqdocvar{t} \coqdocvar{v}) \coqdockw{return} \coqdocvar{diag} \coqdocvar{t} \coqdocvar{v} \coqdockw{with}\coqdoceol
+\coqdocindent{3.50em}
+\ensuremath{|} \coqdocvar{E\_Plus} \coqdocvar{\_} \coqdocvar{\_} \coqdocvar{n1} \coqdocvar{n2} \coqdocvar{H1} \coqdocvar{H2} \ensuremath{\Rightarrow} (\coqdockw{fun} \coqdocvar{X} \coqdocvar{k} \ensuremath{\Rightarrow} \coqdocvar{k} \coqdocvar{n1} \coqdocvar{n2} \coqdocvar{H1} \coqdocvar{H2})\coqdoceol
+\coqdocindent{3.50em}
+\ensuremath{|} \coqdocvar{\_} \ensuremath{\Rightarrow} \coqdocvar{I}\coqdoceol
+\coqdocindent{2.50em}
+\coqdockw{end}.\coqdoceol
+\end{coqdoccode}

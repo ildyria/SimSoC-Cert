@@ -1,0 +1,188 @@
+(Vania, could you please check the paragraph prefixed by [VANIA]?)
+
+Hello.
+
+It would be nice if Frederic Tuong could take care of the following tasks:
+
+- fixing typos indicated by reviewers.
+
+- make sure that EVERY notion and function in C or Coq code is defined 
+before it is mentioned (see review 1)
+
+and Xiaomu the following:
+
+- update the current state of the Coq proof and give more explanations 
+about lemmas, especially lemmas/axioms 3 (see review 1)
+
+- give more explanations on the Compcert C memory model that is central 
+to the Coq development (see review 1)
+
+- Review 2 says "verifying the first instruction took two weeks". I 
+think that this is much more! This should be fixed.
+
+Other remarks:
+
+- review 1 finds introduction (section 1 + 2) too long. it could be 
+slightly reduced if needed.
+
+[VANIA] - review 2 finds that "it's not clear why it's important to 
+verify SoC simulators" and that "the authors could provide examples 
+where simulator bugs were so expensive that it would have been cheaper 
+to verify the simulator than simply test it". We should say that, if 
+wrong decisions are taken because the simulation was wrong, then 
+simulation is useless and make lose even more time in development 
+because everything has to be redone. Vania could perhaps give us some 
+useful info about this. In addition, "At one point the paper mentions 
+that previous versions of the ARM simulator still contained bugs even 
+after extensive testing. The authors should mention what sort of bugs 
+those were and how their verification is guaranteed to eliminate that 
+type of error. " Vania (or Claude?), could you please give us some data 
+about that?
+
+I was thinking in completing this mail before sending it but, after 
+Xiaomu's answer about commits, I think that it is urgent to send it now. 
+I will write a 2nd part later.
+
+Frederic.
+
+
+
+I use [NAME] to propose to someone to do something. Thanks for confirming.
+
+- "In the ultimate design, what is assumed correct and what is proven? 
+(i.e. What is the Trusted Computing Base (TCB)?)"
+
+We should make this clearer indeed. The TCB includes:
+     . the code extracting the instruction data from the manual
+     . the code generating the Coq and C code for instructions (simgen)
+     . the Coq library of Compcert
+     . the Compcert C compiler (which initial and final phases are not 
+certified)
+     . Coq itself (which includes its OCaml code and all the tools 
+necessary for compiling it, and the extraction code from Coq to OCaml)
+     . the OCaml compiler
+     . the Coq and C libraries for the simulators
+
+Anything else?
+
+- "Since the authors are willing to trust the Coq model of ARM extracted 
+from the manual, why not just extract the Coq model to OCaml and run it 
+directly? Presumably, performance would be unacceptably bad. That claim 
+should be backed up with performance numbers."
+
+We should indeed add that extraction is used for testing the Coq model 
+for 2 reasons: 1) there is no printing facilities in Coq, 2) Coq 
+execution is REALLY too slow.
+
+[TUONG] Could you please give some data about the decoding time of some 
+instruction in Coq?
+
+[TUONG] Could you please give some data about the OCaml simulator and 
+the C simulator?
+
+Efficiency of extraction is not the only reason. The processor simulator 
+is only one component between various organized using System C.
+
+- "Are machine integers represented with CompCert's formalization of 32 
+bit integers?"
+
+[XIAOMU] This should be specified in the paper.
+
+- "How are interrupts represented and handled in both the Coq and C 
+simulators?"
+
+[XIAOMU] We should add some remark about that.
+
+- "the correctness theorem is roughly of the form:
+
+   IF
+     A and A' are "equivalent" inputs
+     SimI_coq(A) = B
+     SimI_c(A') = B'
+   THEN
+     B and B' are "equivalent" outputs
+
+Would it be difficult to provide this stronger guarantee?
+
+   IF
+     A and A' are "equivalent" inputs
+     SimI_coq(A) = B
+   THEN
+     SimI_c(A') = B'
+     B and B' are "equivalent" outputs"
+
+[XIAOMU] Any idea? We should discuss why we choose the first formulation and not another one.
+
+- "Why is each C function for simulating an instruction extracted as its own
+program? Why not extract a single library program with one function per
+ARM instruction?"
+
+[XIAOMU] This is wrong. We should explain somewhere that ALL instructions are generated in a single file. And that we do not make the proof of one complete program, but only a proof of correctness of a library function simulating one instruction. All these proofs should then be hopefully composed in order to get a proof of a complete program (which may raises some other difficulties as mentioned in review 1).
+
+- "What causes the 50% - 70% slowdown of CompCert compared to GCC?  In our
+experience, CompCert compares favorably to GCC -O1."
+
+[TUONG] This is not our job to answer this question. But we can provide some data for some examples. Frederic, could you please summarize your experiments?
+
+- "In the Coq function for ADC, you may want to mention that the monad
+implicitly propagates errors. Readers who are unfamiliar with monads may
+otherwise be confused as to where all the "undefined" states went."
+
+[TUONG] Please, add some short explanation about that. Is there any reference about error monads in the paper? If not, we should add one.
+
+- "Page 4:
+   You suggest that staying within an "extensively tested" subset of C
+   means that using GCC is safe. Recent results from  Regehr et al.
+   suggest otherwise. For example, GCC micompiled "(x / -1) != 1" to
+   "0"."
+
+[TUONG] We should perhaps be more careful about such a statement indeed...
+
+
+
+
+(Claude, any comment about the paragraph prefixed by [CLAUDE]?)
+
+- I don't know what to answer to reviewer 3. Perhaps, we need to make 
+sure that our goal is clear. It is not to prove the correctness of some 
+hardware implementation as in the mentioned works. We want to prove the 
+correctness of the some specific C code for a hardware simulator.
+
+- "The main question that remains would then be the difficulty of the 
+instruction decoding part." Any idea about that? I believe that it 
+should be simpler because there is much less memory manipulation to do: 
+it mainly works by analyzing a word and computing various values from it.
+
+[CLAUDE] Btw, I remarked that the current simlight decoder is 
+implemented by using a sequence of if statements. I am surprised: I 
+thought that it would be implemented by using a switch. Compcert 
+supports switch (except unreasonable forms of switch (e.g. Duff's device)).
+
+- "An additional complementary idea might be to make a formal connection
+with the specification mentioned in [8]. As the authors note, the aims
+here are a little different, but it would be a valuable extra "sanity
+check" for both specs. After all the spec in [8] was derived in a more
+manual way but has been under development for many years and connected
+to actual hardware, which is a significant factor."
+
+[XIAOMU] For future work: I think that it will be important to make a 
+PRECISE comparison with [8], and test simlight and simsoc by using the 
+numerous tests they developed. See http://www.cl.cam.ac.uk/~acjf3/arm/ . 
+Tests are here: http://www.cl.cam.ac.uk/~mom22/arm-tests/ .
+
+- "I would prefer the authors to talk at more length about the question
+of undefined or underspecified behaviour. In section 3.1 this is
+mentioned briefly. It wasn't clear to me to what extent the ARM spec
+allows nondeterministic behaviour, and to what extent various
+implementations actually use the freedom to do things differently.
+If this is widespread, then this makes the question of correctness
+more subtle, and there is much more to it than simply failing in such
+cases. I know x86 better than ARM, and for x86 I am sure that many
+real programs rely on supposedly unspecified behaviour. Is the ARM
+situation better in this respect?"
+
+I think that, for the subset of instructions that we consider (no 
+coprocessor instruction), the behavior is deterministic.
+
+
+

@@ -1,0 +1,74 @@
+Dear Authors,
+
+Congratulations, your paper has been accepted for presentation at Raipdo 2011
+workshop. Thanks to take into account the reviewer comments for the final
+submission. The final version should be submitted before December 20.
+
+We look forward to seeing you in Heraklion, January 22, 2011.
+
+Best regards,
+Rabie Ben Atitallah
+
+
+---------------------------- REVIEW 1 --------------------------
+PAPER: 8
+TITLE: Designing a CPU model: from a pseudo-formal document to fast code
+
+
+This paper proposes a method and tool to automatically derive an ISS from the
+semi-formal parts of the reference manual of the processor. This work is really
+impressive as the authors obtain not only a good performing ISS but also tests
+and a formal specification in Coq. I strongly support accepting this paper in
+the workshop. Furthermore this paper is very well written.
+
+
+
+---------------------------- REVIEW 2 --------------------------
+PAPER: 8
+TITLE: Designing a CPU model: from a pseudo-formal document to fast code
+
+
+The article explains the experience on building a full system simulator directly
+using the manual of a given architecture.  The generated simulator takes
+advantage of an existing framework which supports among others binary
+translation, thus the final simulator achieves high simulation speed.  As such
+the article presents a good example on how an instruction set simulator is
+implemented and how the official documentations have to be used (they are not
+perfect).
+
+While the study is interesting from the scientific point of view (parsing a pdf,
+extracting the interesting parts and generating a source code), the approach
+does not seem so practical from a practical point of view.  Generating all the
+framework seems difficult and not that much portable. The authors point out that
+the approach could be reusable to other architecture manuals, however from
+experience they are pretty different, and not sure that for a new architecture
+it is worth the effort of writing the whole framework (or just a big part of
+it).  Additionally, going from one architecture revision to the next is usually
+quiet fast if an iss for the first revision was available, so not that much
+usage for such translation framework when going from architecture version A to
+version B.  However, the approach would be really interesting if all the IP
+providers would propose the same documentation format, syntax, etc, like those
+proposed by existing ADLs.  Another case for which the approach might be of
+interest is if the generated code is something more complicated than C/C++ in
+which case the proposed solution could simplify the programmers life. This seems
+to be the case of the authors future work.
+
+Other techniques are explained in the article but the have been already
+described in the literature (interesting however how they are applied to the
+specific case of the ARM instruction set).
+
+On the evaluation side the results seem a little bit extrange. If the ARMv6
+instruction set is more complex than the ARMv5 instruction set why is it faster
+on Linux64 and Mac? The article doesn't explain it.
+
+Typos:
+- [DONE] usage of 'it' instead of 'if'
+- [DONE] 'can uses' -> 'can use'
+- [DONE] not sure: 'C++ exception' -> 'C++ exception mechanism' or 'C++ exceptions'
+- [DONE] 'fasten' -> 'accelerate' (fasten doesn't mean faster)
+- and others may have been missed
+
+Finally, out of the scope of the article (but mentioned in the article), for the
+reviewer it is not clear why the coq version is generated from the same
+translation framework. What kind of tests/validations are the authors expecting
+to perform.

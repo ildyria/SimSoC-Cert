@@ -1,0 +1,152 @@
+%\documentclass[runningheads]{llncs}
+\documentclass{llncs}
+%\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{amssymb}
+\usepackage{dsfont}
+\usepackage{amsmath} 
+
+\usepackage{url}
+\usepackage{cancel}
+\usepackage{verbatim}
+\usepackage{alltt}
+\usepackage{graphicx}
+
+\usepackage{latexsym}
+\usepackage{xspace}
+%\usepackage{draft} REVOIR
+\usepackage{comment}
+%\usepackage{ntheorem}
+%\usepackage{amsthm} % \proof seems to exist in llncs
+
+\newcommand{\revoir}[1]{\mbox{{[*** {\bfseries\large #1} ***]}}}
+\newcommand{\nouveau}[1]{\textcolor{blue}{#1}}
+
+\newcommand{\egdef}%
+   {\ensuremath{\:\mathrel{\raisebox{-.7ex}%
+   {$\stackrel{\rm def}{=\mkern-8mu=}$}}\:}}
+
+\newcommand{\simlight}{\texttt{simlight}\xspace}
+
+\newtheorem{Prog}{Program}
+%\newcommand{\idcoq}[1]{\texttt{#1}}
+\newcommand{\idcoq}[1]{\ensuremath{\mathit{#1}}}
+\newcommand{\impl}{\ensuremath{\Rightarrow}}
+\newcommand{\flequiv}{\ensuremath{\leftrightarrow}}
+\newcommand{\todo}[1]{\textcolor{blue}{\textsc{[#1]}}}
+\newcommand{\XM}[1]{{\color{red} #1}} % Xiaomu's editing
+\newcommand{\JFM}[1]{{\color{red} #1}} % JF's editing
+
+\newcommand{\union}{\ensuremath{\cup}}
+
+\newenvironment{ml}
+  {\begin{alltt}
+   \footnotesize} %% 3.12.0
+  {\end{alltt}
+  }
+
+\newenvironment{coq}
+  {\begin{alltt}
+   \footnotesize} %% 8.3pl2 (April 2011)
+  {\end{alltt}
+  }
+
+\newenvironment{humC}
+  {\begin{alltt}
+   \footnotesize}
+  {\end{alltt}
+  }
+
+
+
+\begin{document}
+
+\title{First Steps Towards the Certification \\ of an ARM Simulator
+Using Compcert
+\thanks{Work partly supported by ANR (SIVES, ANR-08-BLAN-0326-01).}
+}
+\titlerunning{Certifying an ARM Simulator Using Compcert-C}
+% Official order as registered at CPP
+\author{Xiaomu Shi\inst{1}
+%\and Claude Helmstetter\inst{3}
+\and Jean-Fran\c{c}ois Monin\inst{1,2}
+\and Fr\'ed\'eric Tuong\inst{3}
+\and Fr\'ed\'eric Blanqui\inst{3}
+}
+\institute{%
+Universit\'{e} de Grenoble 1 - LIAMA
+\and CNRS - LIAMA
+\and INRIA - LIAMA
+}
+\authorrunning{X. Shi, J.-F. Monin, F. Tuong \& F. Blanqui}
+
+\maketitle
+
+\begin{abstract}
+The simulation of Systems-on-Chip (SoC) is nowadays a hot topic
+because, beyond providing many debugging facilities,
+it allows the development of dedicated software before
+the hardware is available.
+Low-consumption CPUs such as ARM play a central role in SoC.
+However, the effectiveness of simulation depends on the faithfulness
+of the simulator. 
+To this effect, we propose here to prove significant parts of
+such a simulator, SimSoC.
+Basically, on one hand, we develop a Coq formal model of the ARM 
+architecture while on the other hand, we consider a
+version of the simulator including components written in Compcert-C.
+Then we prove that the simulation of ARM operations, 
+according to Compcert-C formal semantics, 
+conforms to the expected formal model of ARM.
+Size issues are partly dealt with using automatic generation 
+of significant parts of the Coq model and of SimSoC from
+the official textual definition of ARM.
+However, this is still a long-term project. 
+We report here the current stage of our efforts
+and discuss in particular the use of Compcert-C
+in this framework.
+\end{abstract}
+
+
+
+%-------------------------------------------------------------------------
+\input{introduction}
+\input{overall-architecture}
+\input{arm-model}
+\input{simlight}
+\input{prelim-results}
+\input{conclusion}
+
+
+\bibliographystyle{abbrv}
+\bibliography{biblio}
+
+\end{document}
+
+
+%-------------------------------------------------------------------------
+
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "cpp"
+%%% End: 
+
+  abstract-rapido = {
+  For validating low level embedded software, engineers use simulators
+  that take the real binary as input. Like the real hardware, these
+  full-system simulators are organized as a set of components. The main
+  component is the CPU simulator (ISS), because it is the usual
+  bottleneck for the simulation speed, and its development is a long
+  and repetitive task. Previous work showed that an ISS can
+  be generated from an Architecture Description Language (ADL).  In
+  the work reported in this paper, we generate a CPU simulator
+  directly from the pseudo-formal descriptions of the reference
+  manual. For each instruction, we extract the information describing
+  its behavior, its binary encoding, and its assembly syntax. Next,
+  after automatically applying many optimizations on the extracted
+  information, we generate a SystemC/TLM ISS. We also
+  generate tests for the decoder and a formal specification in
+  Coq. Experiments show that the generated ISS is as fast and stable
+  as our previous hand-written ISS.
+  }

@@ -1,0 +1,52 @@
+Typos
+
+Introduction, p. 2: specific specific --> specific
+
+------------------------------------------------------------------------
+
+Table of time performance at the end:
+in the submitted version, only the time for running inversions
+is taken int account.
+In the current scripts we also measure the times for "Qed"
+and the results are actually better.
+
+For example on the machine described below,
+with the following format A + B = S
+where A = time of running inversion
+      B = time for Qed
+      S = sum
+
+hc_inversion:           0.112 + 0.076 = 0.188
+Coq build-in inversion: 1.612 + 2.432 = 4.044
+Derive Inversion:       0.900 + 1.288 = 2.188
+BasicElim:              1.292 + 1.760 = 3.052
+
+
+These results were obtained on a Sony VAIO VPCF11S1E,
+with the following features from /proc/cpuinfo
+
+model name      : Intel(R) Core(TM) i7 CPU       Q 720  @ 1.60GHz
+stepping        : 5
+cpu MHz         : 933.000
+cache size      : 6144 KB
+
+------------------------------------------------------------------------
+
+Section 4, p. 11: the explanation on cp_SR (used in the statement 
+of Lemma same_cp_SR) is not quite correct: it just refers to the 
+original pseudo-code statement from ARM reference manual
+   CPSR = SPSR.
+What is encoded in cp_SR is actually the corresponding C statement
+in the simulator:
+   copy_StatusRegister(&proc->cpsr, spsr(proc))
+as detailed in file pieces_of_simlight_code.c, this directory.
+
+And we could add that this statement (CPSR = SPSR) is formalized 
+in the statement of the lemma by:
+   mk_semstate l b (Arm6_State.set_cpsr s (Arm6_State.spsr s em)
+or, more precisely:
+   Ok tt (mk semstate l b (Arm6 State.set cpsr s (Arm6 State.spsr s em))
+
+------------------------------------------------------------------------
+
+

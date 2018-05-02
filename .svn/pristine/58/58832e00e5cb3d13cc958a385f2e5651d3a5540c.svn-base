@@ -1,0 +1,98 @@
+
+@Book{tlm-book,
+  editor =       {Frank Ghenassia},
+  title =        {Transaction-Level Modeling with {SystemC}. {TLM} Concepts and Applications for Embedded Systems},
+  publisher =    {Springer},
+  year =         2005,
+  month =        {June},
+  note =         {ISBN 0-387-26232-6}
+}
+
+%% inria-00435247, version 1
+%% http://hal.archives-ouvertes.fr/inria-00435247/en/
+@inproceedings{ossc09,
+	title = { {S}im{S}o{C}: {A} full system simulation software for embedded systems},
+	author = {{H}elmstetter, {C}laude and {J}oloboff, {V}ania and {X}iao, {H}ui},
+	keywords = {architecture, simulation, transaction level modeling, instruction set simulator, {TLM}, {ISS}, full system simulation, virtual prototyping, processor, embedded systems, system-on-chip, {S}o{C}},
+	language = {{A}nglais},
+	booktitle = {{OSSC}'09},
+	OPTaddress = {{G}uiyang {C}hine },
+	editor = {{IEEE}},
+	audience = {internationale },
+    OPTday = {20},
+    OPTmonth = {09},
+    year = {2009},
+    OPTURL = {http://hal.archives-ouvertes.fr/inria-00435247/en/}
+}
+
+@inproceedings{FoxM10,
+  author    = {Anthony C. J. Fox and
+               Magnus O. Myreen},
+  title     = {{A Trustworthy Monadic Formalization of the ARMv7 Instruction
+               Set Architecture}},
+  booktitle = {ITP},
+  year      = {2010},
+  pages     = {243-258},
+}
+@Comment   ee        = {http://dx.doi.org/10.1007/978-3-642-14052-5_18},
+@Comment   crossref  = {DBLP:conf/itp/2010},
+@Comment   bibsource = {DBLP, http://dblp.uni-trier.de}
+
+@article{wadjfp09,
+ author = {Schrijvers, Tom and Stuckey, Peter and Wadler, Philip},
+ title = {Monadic constraint programming},
+ journal = {J. Funct. Program.},
+ volume = {19},
+ number = {6},
+ year = {2009},
+ issn = {0956-7968},
+ pages = {663--697},
+ doi = {http://dx.doi.org/10.1017/S0956796809990086},
+ publisher = {Cambridge University Press},
+ address = {New York, NY, USA},
+ }
+
+% First paper about dynamic translation
+@techreport{dyntrans,
+    author={Bob Cmelik and David Keppel},
+    title={Shade: A Fast Instruction-Set Simulator for Execution Profiling},
+    journal={Proceedings of the 1994 ACM SIGMETRICS Conference
+             on the Measurement and Modeling of Computer Systems},
+    month={May},
+    year={1994},
+    pages={128,137}
+}
+
+@Book{arm6refman,
+  author = 	 {ARM},
+  title = 	 {ARM Architecture Reference Manual DDI 0100I},
+  publisher = 	 {ARM},
+  year = 	 2005}
+
+@InProceedings{llvm,
+    author    = {Chris Lattner and Vikram Adve},
+    title     = "{LLVM: A Compilation Framework for Lifelong Program Analysis \& Transformation}",
+    booktitle = "{Proceedings of the 2004 International Symposium on Code Generation and Optimization (CGO'04)}",
+    address   = {Palo Alto, California},
+    month     = {Mar},
+    year      = {2004}
+  }
+
+@MANUAL{coq,
+TITLE	= {The {C}oq Reference Manual, Version 8.2},
+AUTHOR	= {{Coq Development Team}},
+ORGANIZATION	= {INRIA Rocquencourt, France},
+YEAR	= {2008},
+NOTE	= {\url{http://coq.inria.fr/}}}
+
+@INPROCEEDINGS{filliatre07cav,
+AUTHOR	= {J.-C. Filli{\^a}tre and C. March{\'e}},
+TITLE	= {The {Why/Krakatoa/Caduceus} Platform for Deductive Program Verification},
+BOOKTITLE	= {Proceedings of the 19th International Conference on Computer Aided Verification, Lecture Notes in Computer Science 4590}, YEAR = 2007 }
+
+@Manual{frama-c,
+  title = 	 {{Frama-C} User Manual, Release {Boron}-20100401},
+  author = 	 {L. Correnson and P. Cuoq and A. Puccetti and J. Signoles},
+  organization = {CEA LIST, Software Reliability Laboratory, Saclay, France},
+  year = 	 2010}
+

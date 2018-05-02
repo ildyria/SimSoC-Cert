@@ -1,0 +1,398 @@
+Dear Jean-Francois Monin,
+
+Attached please find the reviews for the following paper which you submitted to 
+CPP 2011:
+
+35 First Steps Towards the Certification of an ARM Simulator
+
+Please inform us as soon as possible if any changes in the title of your
+contribution or the list of authors and affiliations are necessary. We 
+are trying to put together a final program for the conference. 
+
+The camera-ready final version of your paper is due on Monday, 
+September 19th, 2011. 
+
+Best,
+
+Jean-Pierre Jouannaud and Zhong Shao
+CPP 2011 Program Co-Chairs 
+
+-------------------------------------------
+Explanation of Scores
+
+Overall evaluation:
+
+ 3 strong accept
+ 2 accept
+ 1 weak accept
+ 0 borderline paper
+-1 weak reject
+-2 reject
+-3 strong reject
+
+Reviewer's confidence:
+
+4 expert
+3 high
+2 medium
+1 low
+0 null
+
+-----------------------------------------------
+
+
+----------------------- REVIEW 1 ---------------------
+PAPER: 35
+TITLE: First Steps Towards the Certification of an ARM Simulator
+AUTHORS: Xiaomu Shi, Jean-Francois Monin, Frédéric Tuong and Frédéric Blanqui
+
+OVERALL RATING: -1 (weak reject)
+REVIEWER'S CONFIDENCE: 3 (high)
+
+The paper reports on an experiment in Coq: a simulation proof between
+a program in Coq that models an assembly instruction and a C program
+that simulates it. The assembly instruction is ADC (add with carry)
+from the ARM instruction set and the C program is part of simlight: a
+simulator for the core ARM instruction set.  The semantics of C is
+given by Compcert. Pseudo-code and C programs are extracted from the
+ARM reference manual (semi-?)automatically but this is referred to as
+previous work [5]. This experiment is presented as the first step
+towards a formally verified simulator.
+
+The approach is well-motivated (sec.1). (But coupled with sec.2, this
+makes for a long introduction.)
+
+I am not sure that enough has been done to make clear points about the
+work. The size of the experiment is moderate (what's new in this paper seems
+to be around a few thousands lines), what makes it difficult
+to draw general conclusions. Compared with lemmas 1&2, lemmas/axioms 3 see
+difficult. The fact that they are axiomatized is likely to hide unanticipated
+difficulties.  Indeed, whereas lemmas 1&2 are about expressions, 3&4
+are about programs. "The 10 remaining ... should require a similar
+effort" (p.14): I really don't see what allows you to say that. "If we
+prove ... of ADC ... we can expect to automate ..." (p.12): isn't this
+far-fetched given the fact that there are still axioms lurking around?
+
+I think that the writing of the paper makes it difficult to read for
+the reader unaware of, at least, the technicalities of related work
+(hasty writing?). Important explanations are lacking (for example:
+"projection" p.5, "projective relation" p.14, "projective-related"
+fig.2 are not explained but used in the statement of the main result
+thm.1 and the explanations of lem.2).  Code is displayed that is
+barely explained (for example: ADC functions (ADC in sec.3.1,
+ADC_step, ADC in sec.4, fun_ADC); what's the difference between
+set_reg and set_reg_or_pc?; etc, etc). Several notations are not
+explained (for example: "S" that appears in all the pieces of code and
+lemmas 1&2). Several of the rare explanations take the form of
+implicit forward references (for example: CPSR appears a lot in sec.3
+but it is explained p.10, SLv6_Processor appears in sec.4 but is
+explained in p.12, copy_StatusRegister from 4.1 explained in
+4.2). Important things are assumed to be known about Compcert (for
+example: claims are done that depend on the C memory model ("much more
+complex" p.5, "their semantics operates on difference memory models
+... is not trivial" p.9 "the evil ... memory models" p.12) but their
+is no concrete explanation; Internal, operation, etc. on p.11 seem to
+be Compcert parlance).
+
+I wonder whether related work have been explored thoroughly. What
+about seL4?  They do simulation proofs between C and a functional
+language and go at length explaining proof techniques in, say, TPHOLs
+2009.
+
+Minor comments:
+- typos: "occurs." l.2,p.10, "af" l.2,p.13
+- both "Compcert" and "Compcert-C" are used
+- fonts: ADC is sometimes in \tt, sometimes in \rm, ADC_step 
+in thm1. is not in \tt, etc.
+- p.11: l.3, what's a "mode"?
+- p.11: "In summary, the translation of StatusRegister looks as follows:"
+but what follows is the code for Transf_stm
+- p.12: $ofs$ makes for ugly spacing
+- thm1: exec_stmt seems to be a function in thm.1 but you just explained in sec.4.1 
+that the semantics if given by a relation, it is confusing
+
+
+----------------------- REVIEW 2 ---------------------
+PAPER: 35
+TITLE: First Steps Towards the Certification of an ARM Simulator
+AUTHORS: Xiaomu Shi, Jean-Francois Monin, Frédéric Tuong and Frédéric Blanqui
+
+OVERALL RATING: 2 (accept)
+REVIEWER'S CONFIDENCE: 3 (high)
+
+>>> SUMMARY
+
+The authors outline a design for a verified SoC simulator. As a first step,
+they focus on verifying the simulation of the processor component. Their
+system automatically extracts a formal model (in Coq) of the processor's
+ISA from its reference manual. They also automatically extract code (in C)
+to simulate each instruction. To verify the simulation code, they prove
+that its behavior matches the behavior of the formal model.
+
+The authors have partially completed an instance of their system targeting
+ARM: extraction of the formal model and the simulation code is complete
+(modulo pretty printing C ASTs expressed in Coq to concrete C syntax) as is
+verification for the code simulating the ADC instruction (modulo axioms
+about supporting C functions that encode common ARM operations).
+
+>>> DETAILS
+
+The authors manually developed two analogous libraries to support simulating
+ARM instructions, one in Coq and another in C. These libraries provide
+services like operating on bit ranges and communicating with co-processors.
+
+For each ARM instruction I in the manual, two functions are automatically
+generated: SimI_coq (in the Calculus of Constructions (CoC)) and SimI_c (in
+C). These functions may call helper functions defined in the ARM simulation
+library for their language.
+
+The goal of verification is proving SimI_coq and SimI_c equivalent.
+Specifically, the correctness theorem is roughly of the form:
+
+  IF
+    A and A' are "equivalent" inputs
+    SimI_coq(A) = B
+    SimI_c(A') = B'
+  THEN
+    B and B' are "equivalent" outputs
+
+Where "equivalence" of inputs and outputs handles the differences of value
+representation between Coq and C.
+
+In order to reason about the equivalence of CoC and C functions, the
+authors actually extract the C simulation code directly to CompCert C ASTs,
+that is, they represent the C simulation code as a data structure in Coq.
+To reason about the behavior of C programs they use the C semantics
+provided by CompCert. To eventually compile and run the C code, they pretty
+print it to concrete C syntax and use traditional tools.
+
+For now, the authors axiomatize the behavior of the ARM simulation library
+written in C. This is not fundamental; they could eventually prove the Coq
+and C libraries equivalent using the same techniques they employ for ARM
+instructions.
+
+>>> STRENGTHS
+
+The automatic extraction of a formal spec from the manual is very
+interesting. Since the spec for each instruction is extracted in the same
+way, accidental omissions or mis-encodings (the sort of errors that plague
+manual specifications) seem less likely. This is particularly important
+because spec bugs remain a weak link in the chain of formal verification.
+
+The fact that the SimSoc team has adopted the authors' extraction
+technique is a testament to the practicality of this approach.
+
+The authors provide a plan for formally verifying a large, complex C
+program. Although verifying the first instruction took two weeks, the
+difficulty should decrease as more instructions are verified. The automated
+extraction of the spec likely saved many hours of tedious work.
+
+This project can serve as a template for verifying C programs in this
+style. There is nothing specific to SoC in their verification technique.
+
+>>> WEAKNESSES
+
+The main weakness is motivation. This project serves as a great test bed
+for the automated spec extraction and C program verification techniques,
+but it's not clear why it's important to verify SoC simulators.
+
+Verification should reduce overall costs. Usually that restricts
+verification to components of the end system (e.g. control software) or
+tools that must preserve the correctness of those components (e.g.
+compilers). In contrast, the SoC simulator is only used for prototyping
+before hardware is available and for debugging. Since the simulator itself
+is not part of any end system, it is not clear why it ought to be verified.
+
+To address this criticism, the authors could provide examples where
+simulator bugs were so expensive that it would have been cheaper to verify
+the simulator than simply test it.
+
+At one point the paper mentions that previous versions of the ARM simulator
+still contained bugs even after extensive testing. The authors should
+mention what sort of bugs those were and how their verification is guaranteed
+to eliminate that type of error. 
+
+The paper also leaves some important questions unanswered:
+
+  In the ultimate design, what is assumed correct and what is proven?
+  (i.e. What is the Trusted Computing Base (TCB)?)
+
+  The paper outlines how to verify instruction simulators, but does not
+  explain how to compose these into a chip simulator, nor on how to
+  compose a chip simulator with other components to achieve a fully
+  verified, complete SoC simulator. The authors should briefly outline how these
+  verifications will be done in the future. If it is too difficult to
+  predict, the authors should at least outline a promising approach to
+  suggest that the goal is feasible.
+
+  Since the authors are willing to trust the Coq model of ARM extracted
+  from the manual, why not just extract the Coq model to OCaml and run it
+  directly? Presumably, performance would be unacceptably bad. That claim
+  should be backed up with performance numbers.
+
+The paper is slightly difficult to follow and would benefit by reorganizing
+to a more "top-down" style.
+
+>>> QUESTIONS
+
+How are basic datatypes represented in the Coq spec?  Are machine integers
+represented with CompCert's formalization of 32 bit integers?  If not, how
+are low level details like overflow handled?
+
+How are interrupts represented and handled in both the Coq and C
+simulators?
+
+Would it be difficult to provide this stronger guarantee?
+
+  IF
+    A and A' are "equivalent" inputs
+    SimI_coq(A) = B
+  THEN
+    SimI_c(A') = B'
+    B and B' are "equivalent" outputs
+
+Why is each C function for simulating an instruction extracted as its own
+program? Why not extract a single library program with one function per
+ARM instruction?
+
+What causes the 50% - 70% slowdown of CompCert compared to GCC?  In our
+experience, CompCert compares favorably to GCC -O1.
+
+>>> NIT PICKS
+
+In the Coq function for ADC, you may want to mention that the monad
+implicitly propagates errors. Readers who are unfamiliar with monads may
+otherwise be confused as to where all the "undefined" states went.
+
+Page 1: Why are native simulators the "most abstract"?
+
+Page 2: What do you mean by "realistic speed" for simulation?
+
+Page 2: "kind of functional simulators can" =>
+        "kind of functional simulator can" =>
+
+Page 3: "We choosed" => "We chose"
+
+Page 10: "brute impression" => "naive approach"
+
+Page 4:
+  You suggest that staying within an "extensively tested" subset of C
+  means that using GCC is safe. Recent results from  Regehr et al. 
+  suggest otherwise. For example, GCC micompiled "(x / -1) != 1" to
+  "0". Perhaps your claim is true with optimizations turned off.
+  However, with no optimizations, GCC may actually be slower than
+  CompCert!
+
+
+----------------------- REVIEW 3 ---------------------
+PAPER: 35
+TITLE: First Steps Towards the Certification of an ARM Simulator
+AUTHORS: Xiaomu Shi, Jean-Francois Monin, Frédéric Tuong and Frédéric Blanqui
+
+OVERALL RATING: 0 (borderline paper)
+REVIEWER'S CONFIDENCE: 3 (high)
+
+The paper presents the formal certification in Coq of SimLight, a
+lightweight subset of the SimSoc simulator for ARM.  The proof of
+correctness of the simulator is achieved as follows.  We derive a Copw
+specification of the ARM instruction set, as well as a model of the
+simulator in Coq (in CompCert C).  The proof of correspondence
+connects the two.
+
+This is clearly important research area.  Certification of simulators
+is an important piece in both hardware and software verification
+areas.  Accuracy of simulators is of paramount importance for hardware
+verification, since it is used as a golden model.  It is important
+also for software in the SoC domain, since software is often developed
+and tested based on the functional characteristics of the simulator
+before the hardware is available.
+
+Nevertheless, my evaluation of the paper has a low score, since I
+don't see a specific contribution here, either in insight or in
+complexity of systems handled, that pushes the state of the art.
+
+On the complexity side, the work is pretty early at this point.  After
+all, while ADC is a good illustrative example, its verification is not
+surprising.  I do encourage the authors to continue this work and
+verify more intensive instructions, of course.  But at this stage I am
+not sure that they have a non-trivial subset of the ARM instruction
+set to justify publication.
+
+On the insight front, I did not read anything in the paper that
+surprised me, or did not seem well-known.  The idea of the
+verification, the way the authors are proceeding, reminds me of Hunt's
+early work in 1985 with microprocessor verification.  See for example:
+
+@Book{fm8501,
+  author     = "Hunt, Jr., W. A.",
+  title      = "{FM8501: A Verified Microprocessor}",
+  publisher  = "Springer-Verlag",
+  series     = "LNAI",
+  volume     = "795",
+  year       = 1994
+}  
+
+More generally, the Boyer-Moore theorem proving community (Nqthm and
+ACL2) has done a significant amount of work over the last two decades
+towards formalization and certification of the simulators, for
+machines ranging from Rockwell Collins AAMP to the Java Virtual
+machine, and it is surprising to not even see a mention of any of this
+in the paper.  The techniques suggested by the authors seem very close
+to those developed by that community, and I expected a careful
+comparison of this work with theirs.
+
+choosed => choose
+sacrifying => sacrificing
+
+
+----------------------- REVIEW 4 ---------------------
+PAPER: 35
+TITLE: First Steps Towards the Certification of an ARM Simulator
+AUTHORS: Xiaomu Shi, Jean-Francois Monin, Frédéric Tuong and Frédéric Blanqui
+
+OVERALL RATING: 2 (accept)
+REVIEWER'S CONFIDENCE: 3 (high)
+
+The authors describe the development and (still in progress)
+verification of a simulator for the ARM architecture. The method they
+use is based on autogeneration from the actual architecture manual,
+which is an unusual and commendable approach to the known difficulty
+of validating such a specification. On the whole, this is an unusual
+and original piece of work that I recommend for publication.
+
+Although the headline accomplishments as far as verification goes do
+not look impressive at first sight, I agree with the authors'
+assessment that once a single instruction like ADC is verified
+successfully, most others should be routine modifications, and one
+hopes that this regularity could be exploited by the computer in a
+generic proof method, not by human beings. The main question that
+remains would then be the difficulty of the instruction decoding part.
+Some estimates of how long this part might take would certainly be of
+interest, if the authors have any concrete idea.
+
+A different approach one might take is to automatically extract OCaml
+code from the Coq specification and use that. Has such an approach
+been tried? I would imagine it is much slower, but correctness would
+almost follow a priori. Some concrete experiments would be
+instructive.
+
+An additional complementary idea might be to make a formal connection
+with the specification mentioned in [8]. As the authors note, the aims
+here are a little different, but it would be a valuable extra "sanity
+check" for both specs. After all the spec in [8] was derived in a more
+manual way but has been under development for many years and connected
+to actual hardware, which is a significant factor.
+
+I would prefer the authors to talk at more length about the question
+of undefined or underspecified behaviour. In section 3.1 this is
+mentioned briefly. It wasn't clear to me to what extent the ARM spec
+allows nondeterministic behaviour, and to what extent various
+implementations actually use the freedom to do things differently.
+If this is widespread, then this makes the question of correctness
+more subtle, and there is much more to it than simply failing in such
+cases. I know x86 better than ARM, and for x86 I am sure that many
+real programs rely on supposedly unspecified behaviour. Is the ARM
+situation better in this respect?
+
+
+

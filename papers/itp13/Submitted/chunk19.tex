@@ -1,0 +1,36 @@
+\begin{coqdoccode}
+\coqdocnoindent
+\coqdockw{Definition} \coqdocvar{premises\_Ap} \{\coqdocvar{u}\} (\coqdocvar{a}: \coqdocvar{A} \coqdocvar{u}) :=\coqdoceol
+\coqdocindent{2.00em}
+\coqdockw{let} \coqdocvar{diag} \coqdocvar{x} :=\coqdoceol
+\coqdocindent{3.00em}
+\coqdockw{match} \coqdocvar{x} \coqdockw{with} \coqdoceol
+\coqdocindent{4.00em}
+\ensuremath{|} \end{coqdoccode}
+$\cal P$ \begin{coqdoccode}
+ \ensuremath{\Rightarrow} \coqdockw{\ensuremath{\forall}} (\coqdocvar{X}: \coqdockw{Prop}), \end{coqdoccode}
+$(\forall \mathbf{p_1}, X) \rightarrow  \ldots(\forall \mathbf{p_n}, X) \rightarrow X$ \coqdoceol \begin{coqdoccode}
+\coqdocindent{4.00em}
+\ensuremath{|} \coqdocvar{\_} \ensuremath{\Rightarrow} \coqdocvar{True} \coqdoceol
+\coqdocindent{3.00em}
+\coqdockw{end} \coqdoctac{in}\coqdoceol
+\coqdocindent{2.00em}
+\coqdockw{match} \coqdocvar{a} \coqdoctac{in} \coqdocvar{A} \coqdocvar{p} \coqdockw{return} \coqdocvar{diag} \coqdocvar{p} \coqdockw{with}\coqdoceol
+\coqdocindent{3.50em}
+\ensuremath{|} \end{coqdoccode}
+$C_1\; \mathbf{e_1}$ \begin{coqdoccode}
+  \ensuremath{\Rightarrow} \coqdockw{fun} \coqdocvar{X} \coqdocvar{k1}... \coqdocvar{kn}  \ensuremath{\Rightarrow} \coqdocvar{k1}\end{coqdoccode}
+$\mathbf{e_1}$ \coqdoceol  \begin{coqdoccode}
+\coqdocindent{3.50em}
+\end{coqdoccode}
+$\vdots$ \coqdoceol  \begin{coqdoccode}
+\coqdocindent{3.50em}
+\ensuremath{|} \end{coqdoccode}
+$C_n\; \mathbf{e_n}$ \begin{coqdoccode}
+  \ensuremath{\Rightarrow} \coqdockw{fun} \coqdocvar{X} \coqdocvar{k1}... \coqdocvar{kn}  \ensuremath{\Rightarrow} \coqdocvar{kn}\end{coqdoccode}
+$\mathbf{e_n}$ \coqdoceol  \begin{coqdoccode}
+\coqdocindent{3.50em}
+\ensuremath{|} \coqdocvar{\_} \ensuremath{\Rightarrow} \coqdocvar{I}\coqdoceol
+\coqdocindent{2.00em}
+\coqdockw{end}.\coqdoceol
+\end{coqdoccode}

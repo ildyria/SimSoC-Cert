@@ -1,0 +1,68 @@
+SimSoC-Cert, a toolkit for generating certified processor simulators
+See the COPYRIGHTS and LICENSE files
+
+--------------------------------------------------------------------
+
+This directory contains a part of the SimSoC-Cert project, 
+in order to show the use of our handcrafted inversion.
+
+--------------------------------------------------------------------
+Prerequisites:
+
+* OCaml 3.12.0 available from http://caml.inria.fr/ .
+
+* Coq 8.3plX, with X>=2 available from http://coq.inria.fr/ .
+
+* The sources of CompCert 1.9 available from
+  http://compcert.inria.fr/ .
+
+* All the prerequisites required for CompCert as described in
+  /path/to/compcert/README.
+
+* CompCert configured with target 'ia32-linux' and compiled with Coq
+  8.3plX, X>=2 as described in /path/to/compcert/README.
+
+--------------------------------------------------------------------
+Configuration and compilation of CompCert:
+
+See /path/to/compcert/README.
+
+Target to use: ia32-linux.
+
+--------------------------------------------------------------------
+Configuration of SimSoC-Cert:
+
+      ./configure /path/to/compcert
+
+This will create a link to compcert in the current directory,
+to be used by Makefiles,
+and a template called dir-locals.el for .dir-locals.el,
+to be used with emacs/proofgeneral (> 4.1).
+Such a .dir-locals.el is put in directory hc_inversion.
+  It also creates a file coqrc to add in your ~/.coqrc file,
+  if you prefer this (older) alternative to .dir-locals.el
+
+--------------------------------------------------------------------
+Compilation of everything at once:
+      make
+
+Then go to directory hc_inversion and run
+      make time
+      make size
+
+--------------------------------------------------------------------
+Step by step:
+
+Compilation of ARMv6 basic library:
+      (cd coq; make)
+
+Compilation of Coq formal semantics of ARMv6:
+      (cd arm6; make)
+
+Coq files for our inversion:
+      cd hc_inversion
+      make
+      make time
+      make size
+
+

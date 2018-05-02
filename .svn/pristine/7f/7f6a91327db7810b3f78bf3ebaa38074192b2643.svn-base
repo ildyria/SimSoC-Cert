@@ -1,0 +1,16 @@
+#!/bin/bash
+# pdf : acroread -toPostScript -size a4
+# ou pdf2ps
+
+pref=$1
+entr="$pref".ps
+resu="$pref"-2.ps
+
+e=.95
+x1=240mm
+y1=-30mm
+y2=100mm
+
+pstops "2:0L@$e($x1,$y1)+1L@$e($x1,$y2)" "$entr" "$resu"
+
+echo "-> $resu"

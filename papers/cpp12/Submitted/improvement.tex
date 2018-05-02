@@ -1,0 +1,187 @@
+\section{Handling positive cases}
+\label{sec:improvement}
+
+However, 
+the technique explained in the previous section 
+has to be extended in order to cover more general
+situations. 
+
+A first easy improvement makes \diag independent
+from the conclusion.
+To this effect, we replace it with $(\forall X, X)$ 
+in the first branch of \diag.
+In our previous example, this yields
+
+\coqdocinput{chunk27}
+
+\noindent
+Then the previous proof term 
+(\match $H$ \intac $\eveni\;n$ \retac $\diag\;n$ \with 1 $\ldots$)
+has the type $\forall X, X$
+and then can be successfully applied to any current conclusion.
+Alternatively, we can define a general function as follows:
+
+\coqdocinput{chunk29}
+
+
+\medskip
+Next consider the following theorem:
+
+\coqdocinput{chunk28}
+
+\noindent
+The proof is by induction on $\eveni\;n$.
+In the inductive step, we have to prove $\eveni\;m$
+from the induction hypothesis $\eveni\:(n + m) \rightarrow \eveni\;m$
+and a new hypothesis $H: \eveni\: (S\: (S\: (n + m)))$.
+Intuitively, we want to invert $H$ in order to push $\eveni\:(n + m)$
+in the environment. 
+The trick given at the end of section~\ref{sec:absurd}
+is then of no help.
+However, we can instead adapt \prone as follows:
+
+\coqdocinput{chunk30}
+
+\noindent
+Then, applying \prET to $H$ yields a function in continuation passing style.
+Its type parameter $X$ is automatically identified to the conclusion
+$\eveni\;m$, while $y$ is bound to $n+m$,
+so that we get a new goal $\eveni\:(n+m) \rightarrow \eveni\;m$.
+That is, we have exactly the expected inversion.
+Functions such as \prone and \prET can be seen as inversion
+lemmas, but note that their type is the dependent type
+expressed by their own \diag.
+
+More generally,
+in the case of an inductive type $A(u)$ with parameter $u:U$,
+given a constructor of type $\forall \mathbf{p}, A \;p$, 
+where $\mathbf{p}$ is a telescope and $p:U$ an expression made
+of constructors in the type $U$,
+we proceed similarly:
+the \match of \diag has a first branch filtering $\cal P$
+and returning 
+$\forall X: Prop, (\forall \mathbf{p}, X) \rightarrow X$.
+If several constructors are possible for $A \:\cal P$,
+say $C_1: \forall \mathbf{p_1}, A \:\cal P$,
+$\ldots$, $C_n: \forall \mathbf{p_n}, A \:\cal P$,
+the inverting lemma corresponding to $A \:\cal P$ will be:
+
+\coqdocinput{chunk19}
+
+\noindent
+Remark the close relationship with the impredicative encoding
+of data-types in system F.
+
+
+%%%% END of JF, BEGIN of XM
+
+The next stage to be considered is the case of
+an inductive type with more than one parameter.
+This raises new issues, because additional identities
+between arguments of the premises or the conclusion
+of a constructor may occur.
+This happens routinely in our main experiment,
+to be described below in section~\ref{sec:simsoccert}.
+In order to explain the problems and how to deal with
+them in our framework, 
+we introduce a toy language.
+
+% To change to this new example is closer to what we have during using CompCert C
+% language semantics in SimSoC-Cert project.
+% It helps to explain the next problems we met.
+
+The following code is the Coq description of this toy language.
+The inductively defined evaluation rule $eval$ has two parameters.
+The first one is the input type $tm$, $tm\_const$ and $tm\_plus$ are the
+expected cases in pattern matching.
+The second parameter is an output of type $val$ is either nat or bool.
+%and it is the extra variable we have to deal with.
+
+\medskip
+\coqdocinput{chunk31}
+\medskip
+
+In constructor $E\_Plus$,
+the two premises share the variables $t1, t2, n1, n2$ with the
+conclusion. 
+If we use the last solution 
+with continuation passing style, as it is presented above,
+we are able to keep the premises 
+but the relationship between the output values
+as specified in the inductive definition will be lost
+in the generated subgoal.
+
+In order to solve this issue,
+we add a suitable parameter to $X$ 
+corresponding to the second parameter of the inductive relation.
+The function for extracting the premises of $E\_Plus$ is:
+
+\medskip
+\coqdocinput{chunk34}
+\medskip
+
+Consider the following example.
+
+\medskip
+\coqdocinput{chunk38}
+\medskip
+
+By applying $pr\_plus$, $v$ will be equated to $nval~(plus~n1~n2)$ 
+according to the rule specified by $E\_plus$.
+
+% Next, consider an extra hypothesis $P\; v$ taking the same variable $v$. 
+% This $v$ needs to be assigned to $nval~(plus~n1~n2)$ too.
+% So except the inductive predicate we want to invert, 
+% all other hypothesis share the same parameters which need to be assigned by
+% equivalence relation, should be first revert to the goal.
+
+% The second thing is when other hypothesis contain the same variables.
+% Hypothesis $eval (tm\_plus (tm\_const 1) (tm\_const 0)) v$ is
+% our inverting target, where $v$ is the output value we want to keep the.
+% And hypothesis $P v$ is taking varialbe $v$ as parameter
+% We want all 
+
+% In order to have them changed to the same value as in the goal when perform
+% applying rules. So we need Coq tactic \coqdockw{revert} to put it in goal before
+% apply a corresponding definition.
+
+% The third problem to solve is,
+% according to what we have in proof goal we may need to provide different
+% diagonalization function for some constructor.
+
+
+% Then we want to have the equility $n1 = 1$ and $n2 = 0$.
+% Normally, we will define a diagonalization function having the similar form 
+% as $pr\_plus$ using a $X$ of type $val -> Prop$.
+
+% \medskip
+% \coqdocinput{chunk32}
+% \medskip
+
+% But the fact is
+% applying such function will keep the equivalence between $nval n$ and
+% $nval 1$. Then the proof assistant will complain that in goal we have nothing
+% in form of $nval n1$ but in form of $nval (n1 + n2)$ with operator $+$.
+% Then we know in this case,
+% the variable we want to keep is not $nval n1$ but $n1$ which is of type 
+% $nat$. But you can't have this $n1$ for free.
+% So the diagonalization function will match two parameters: the key parameter
+% matching type $tm$ of expected result $tm\_const tc$,
+% and the evaluation output $v$ of $nval n$ in order to
+% register $n$ independently.
+
+% \medskip
+% \coqdocinput{chunk33}
+% \medskip
+
+% And the other diagonalization function $pr\_const\_1$ will be used
+% when the goal is in normal form $nval n$,
+% in this case $pr\_const\_1\_2$ won't be able to help.
+
+
+
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "cpp12"
+%%% End: 

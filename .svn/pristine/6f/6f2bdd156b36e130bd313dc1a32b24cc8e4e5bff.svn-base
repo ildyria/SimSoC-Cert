@@ -1,0 +1,751 @@
+\selectlanguage{french}
+\chapter*{Version française\markboth{Version française}{}}
+\addcontentsline{toc}{chapter}{Version française}
+\renewcommand{\thechapter}{F}
+\setcounter{table}{0} 
+
+\section*{Introduction}
+\addcontentsline{toc}{section}{Introduction}
+
+\subsection*{Certification de SimSoC}
+\addcontentsline{toc}{subsection}{Certification de SimSoC}
+
+%
+Cette thèse expose nos travaux de certification d'une partie d'un programme C/C++
+nommé \simsoc (Simulation of System on Chip), %~\cite{helmstetter2008simsoc},
+qui simule le comportement d'architectures basées sur des processeurs
+tels que ARM, PowerPC, MIPS ou SH4.
+
+Un simulateur de \emph{System on Chip} peut être utilisé pour développer
+le logiciel d'un système embarqué spécifique, afin de raccourcir les phases
+des développement et de test, en particulier quand la vitesse de simulation
+est réaliste (environ 100 millions d'instructions par seconde par c{\oe}ur
+dans le cas de \simsoc).
+Les réductions de temps et de coût de développement obtenues se traduisent
+par des cycles de conception interactifs et rapides,
+en évitant la lourdeur d'un système de développement matériel.
+
+Un problème critique se pose alors : le simulateur simule-t-il effectivement
+le matériel réel ?
+Pour apporter des éléments de réponse positifs à cette question,
+notre travail vise à prouver la correction d'une partie significative
+de \simsoc, de sorte à augmenter la confiance de l'utilisateur en ce simulateur
+notamment pour des systèmes critiques.
+
+\simsoc est un logiciel complexe,
+comprenant environ 60\:000 de C++,
+intégrant des parties écrites en SystemC et
+des optimisations non triviales pour atteindre une grande vitesse de simulation.
+%
+La partie de \simsoc dédiée au processeur ARM,
+l'un des plus répandus dans le domaine des SoC,
+transcrit les informations contenues
+dans un manuel épais de 1138 pages.
+La première version du simulateur ARM de \simsoc a été codée à la main.
+Les erreurs sont inévitables à ce niveau de complexité,
+et certaines sont passées au travers des tests intensifs
+effectués sur la version précédente de \simsoc pour l'ARMv5,
+qui réussissait tout de même à simuler l'amorçage complet de Linux.
+Au delà des objectifs de vitesse,
+la précision est nécessaire.
+Toutes les instructions doivent être simulées exactement comme décrit
+dans la spécification (en supposant que le matériel en fait de même).
+Dans les expériences effectuées avec \simsoc, des erreurs de comportement
+sont apparues de temps à autre mais il était très difficile 
+d'en détecter l'origine. 
+Des tests intensifs peuvent couvrir la plupart des instructions
+mais certains cas rares restent inexplorés, laissant la voie ouverte
+à des problèmes potentiels.
+
+Une meilleure approche est alors nécessaire pour atteindre 
+un degré de confiance plus élevé dans le simulateur. 
+Nous proposons de certifier \simsoc par l'emploi de méthodes formelles.
+
+Dans cette thèse, nous considérons l'un des modules de \simsoc:
+le simulateur d'architecture ARM.
+L'architecture ARM est l'une des plus répandues sur le marché
+des systèmes embarqués, en particulier les téléphones mobiles et les tablettes.
+Selon la compagnie ARM, 6,1 milliards processeurs ARM ont été mis sur le marché en 2010, et 95\:\% d'entre eux sont utilisés dans des \emph{smart phones}.
+
+Comme indiqué plus haut, le simulateur représente un gros volume de logiciel.
+Et sa spécification elle-même est assez complexe, 
+du fait de l'architecture sophistiquée de l'ARM, 
+qui comporte de nombreux composants.
+Avant de considérer l'ensemble de l'architecture ARM,
+nous avons décidé de concentrer nos efforts 
+sur les parties essentielles,
+qui sont à la fois les plus importantes et les plus sensibles:
+celles qui concernent le CPU (dans la famille de processeurs ARM11).
+Au moment où notre travail a démarré, le module de simulation de l'ARM
+réalisé dans \simsoc correspondait à la version 5 (ARMv5).
+Plutôt que de certifier cette architecture bientôt dépassée,
+nous avons décidé d'anticiper l'évolution de \simsoc
+et de travailler sur la version suivante: ARM Version 6 (ARMv6).
+Pour des raisons expliquées plus bas,
+liées aux technologies de vérification disponibles pour C
+(en particulier \compcert),
+il était nécessaire de travailler sur un module écrit en C plutôt qu'en C++.
+Ce module, appelé \simlight, peut s'exécuter soit seul,
+soit en tant que composant intégré dans \simsoc.
+
+Plus de 60\:\% du développement de \simsoc est constitué de la partie CPU
+(voir figure~\ref{fig:dev} page~\pageref{fig:dev}).
+Les parties restantes comprennent la gestion mémoire (mémoire virtuelle
+et pagination), la gestion des interruptions et les communications avec
+les périphériques.
+En résumé, la complexité de la cible a ainsi pu être réduite
+mais cela représente encore 10\,000 lignes de code C à certifier.
+En outre la spécification reste très complexe,
+étant décrite dans un gros document, 
+le manuel de référence de l'architecture ARM Version~6.
+
+L'enjeu est donc ici de certifier un programme de cette taille
+par rapport à une spécification assez complexe.
+
+Rappelons tout d'abord que la certification de programme
+s'appuie toujours sur un modèle formel du programme étudié.
+Un tel modèle formel est lui-même dérivé d'une sémantique formelle
+du langage de programmation utilisé.
+Pour des langages de programmation impératifs comme C,
+on considère souvent des outils basés sur une sémantique axiomatique
+(à la Hoare) comme \framac~\cite{canet2009value},
+qui intègre un ensemble d'outils d'analyse de programmes pour C.
+La plupart de ces outils reposent sur ACSL (ANSI/ISO C Specification Language),
+un langage de spécification basé sur une sémantique axiomatique de C.
+ACSL est assez puissant pour exprimer des propriétés directement
+au niveau du programme C.
+Des étiquettes d'état peuvent être insérées pour dénoter un point de
+de contrôle du programme, et peuvent être utilisées
+dans des fonctions logiques ou des prédicats.
+\framac est déjà une plate-forme assez mûre pour effectuer
+des analyses statiques et de la vérification déductive automatique
+sur des programmes C.
+Un avantage de \framac et des outils similaires est qu'il est supporté
+par des technologies de preuve automatique,
+qui permettent une importante économie d'efforts de la part de l'utilisateur.
+Des succès ont été obtenues sur des programmes complexes et astucieux,
+par exemple l'algorithme de Schorr-Waite qui manipule des structures chaînées.
+
+% Les approches basées sur une sémantique axiomatique
+% (logique de Hoare par exemple)
+% sont les plus répandues en preuve de programmes impératifs.
+Cependant, d'une manière générale, un haut degré d'automatisation
+tend à affaiblir le niveau de la certification du fait 
+que les prouveurs automatiques sont eux-mêmes des programmes
+complexes et sujets à erreurs.
+En théorie, de tels programmes peuvent produire des certificats
+pouvant être contrôlés par un assistant à la preuve fiable
+(par exemple basé sur une architecture LCF).
+Mais actuellement c'est encore loin d'être le cas en pratique.
+Un problème supplémentaire se trouve dans la distance qui sépare
+la sémantique axiomatique de l'implantation effective,
+à moins que le générateur de VC soit lui-même certifié.
+Cette question a été examinée récemment, notamment dans le
+travail de Paolo Herms sur \whyCert~\ref{sec:whycert}
+-- et qui n'était pas disponible au moment où nous avons
+commencé de travailler sur la certification de \simsoc.
+
+Un autre problème important est que l'automatisation n'est possible que sur
+des théories ou logiques offrant un pouvoir d'expression limité.
+Cela peut compliquer l'expression des spécifications et des propriétés
+attendues au bon niveau d'abstraction,
+notamment dans un contexte où la spécification est très complexe.
+Actuellement, \framac implémente un sur-ensemble de la logique du premier ordre.
+Une autre limitation importante pour nous est que ACSL ne permet
+pas de décrire les changements de type de pointeurs (\emph{cast}).
+En revanche, la sémantique opérationnelle définie pour \compcert C
+(voir ci-dessous) est capable de gérer les \emph{casts} sur des pointeurs.
+
+% HERE : The \why software
+Le logiciel \why est l'un des composants les plus importants de \framac.
+Il effectue un calcul de plus faible pré-condition dans le calcul de Dijkstra.
+\why constitue la base de \jessie, un plugin de \framac qui compile du
+code C annoté en ACSL vers le langage intermédiaire de \jessie.
+Le résultat est donné en entrée au générateur 
+de conditions de vérification (VC) de \why,
+qui à son tour produit des formules destinées à des prouveurs
+automatiques ou interactifs comme Coq.
+
+La version 3 de \why correspond à à changement de conception en profondeur
+de \why.
+Il n'y a pas encore de frontal pour le langage C.
+Il s'agit d'une bibliothèque standard de théories logiques
+(arithmétique entière et réelle, opérations booléennes, ensembles, etc.)
+ou portant sur des structures de données de programmation (tableaux,
+files, tables à adressage dispersé, etc.). 
+La transmission de code C annoté en ACSL vers le générateur de VC
+de \why 3 s'effectue par \jessie via un code intermédiaire
+en \whyML, un langage de spécification pour la spécification
+et la programmation impérative.
+Dans la nouvelle architecture, le langage de spécification est enrichi
+de façon à supporter davantage de prouveurs automatiques.
+En outre, une interface formelle est définie pour faciliter
+l'accès à de nouveaux prouveurs externes. 
+Ainsi, choisir \why ou \why 3 dans notre cas impliquerait
+une dépendance vis-à-vis de la chaîne de transformation constituée de
+\jessie et \why, pour aller de code C annoté en ACSL jusqu'aux 
+conditions de vérification pour Coq.
+
+Dans le cas de \simsoc, nous avons besoin de prendre en compte
+simultanément une très grosse spécification et des astuces disponibles en C,
+comme le forçage de type, qui sont utilisées dans des fonctions
+délicates liées à la gestion de la mémoire.
+En d'autres termes, nous avons besoin d'un cadre de travail
+qui d'une part soit assez riche en mécanismes d'abstraction
+pour nous permettre de gérer une telle spécification,
+et d'autre part comporte une définition précise de suffisamment
+de mécanismes du langage C.
+Pour les raisons exposées ci-dessus, il n'était pas clair que \framac
+puisse satisfaire ces exigences, même avec Coq en sortie.
+Le calcul automatique de plus faibles pré-conditions ou de domaines
+de variation est peu approprié à notre cas.
+Nous avons besoin de vérifier des propriétés plus spécifiques
+relatives à la version formelle de l'architecture ARMv6.
+Cette spécification est assez complexe, par exemple en ce qui concerne
+le principal type de données défini pour exprimer l'état du processeur.
+
+Nous avons donc préféré essayer une approche
+moins classique mais plus directe,
+basée sur la sémantique opérationnelle de C:
+cela était heureusement rendu possible en théorie depuis la formalisation
+en Coq d'une telle sémantique au sein du projet \compcert.
+% et mettait à notre disposition toute la puissance de Coq pour
+% gérer la complexitité de la spécification.
+À notre connaissance,
+%au delà de la certification d'un simulateur,
+il s'agit de la première expérience de preuve de correction
+de programmes C à cette échelle basée sur la sémantique opérationnelle.
+
+\subsection*{SimSoC}
+\addcontentsline{toc}{subsection}{SimSoC}
+
+Dans cette section, nous introduisons notre cible de certification:
+\simsoc, un simulateur de \emph{System-on-Chip} (SoC) capable de simuler 
+divers processeurs à une vitesse réaliste.
+En tant que  simulateur de \emph{System-on-Chip}, les objets simulés
+sont des processeurs de systèmes embarqués utilisés dans des équipements
+modernes d'électronique grand public ou de systèmes industriels
+(par exemple ARM, PowerPC, MIPS).
+Il entre dans la catégorie des \emph{simulateurs de système complets}
+car il peut simuler la plate-forme matérielle complète et exécuter
+le logiciel embarqué ``tel quel'', y compris le système d'exploitation.
+Ce genre de simulateur joue un rôle important dans le développement
+des systèmes embarqués,
+car le logiciel embarqué peut être testé et développé sur le simulateur.
+Si l'on veut que le logiciel et le matériel soient prêts à aller sur
+le marché en même temps, le logiciel doit parfois
+être développé avant que le matériel soit disponible.
+Un modèle exécutable du SoC est alors nécessaire.
+Un simulateur procure d'autres avantages, permettant de combiner
+la simulation avec des méthodes formelles comme le model-checking
+ou l'analyse de traces pour découvrir des anomalies matérielles ou logicielles.
+
+Notre simulateur, \simsoc, travaille au bas niveau du système.
+Il prend du code binaire réel en entrée ainsi qu'un modèle de simulation
+de la carte complète : processeur, unités mémoire, bus, contrôleur réseau, etc.
+Il peut émuler le comportement de l'exécution des instructions,
+des exceptions et des interruptions des périphériques.
+
+En dehors du développement de logiciel, le simulateur peut aussi être utilisé
+pour la conception de matériel.
+En présence de composants supplémentaires fournis par une tierce partie,
+les développeurs peuvent tester modulairement ces derniers dans 
+l'environnement complet de simulation.
+
+\simsoc est développé en SystemC, une bibliothèque C++,
+et utilise TLM (\emph{transaction level modelling})
+pour modéliser les communications entre les modèles de simulation.
+Afin de simuler les processeurs à une vitesse raisonnable, 
+la simulation du jeu d'instructions utilise une technique appelée
+traduction dynamique (\emph{dynamic translation}),
+qui traduit l'entrée binaire en une représentation intermédiaire
+elle-même compilée en code de la machine hôte.
+\simsoc étant un environnement assez gros et complexe qui influence
+de développement à la fois de logiciel et de matériel,
+il est important de comprendre quelles sont les parties les plus
+significatives afin de pouvoir déterminer la cible de la certification.
+
+\subsubsection*{Simulation du jeu d'instructions}
+
+Un simulateur de systèmes complets doit inclure
+un simulateur de jeu d'instructions, 
+qui lit les instructions du programme et émule le comportement
+du processeur cible.
+Pour illustrer notre cible de certification,
+nous détaillons ici les techniques de réalisation 
+d'un simulateur de jeu d'instructions.
+Il y a trois sortes de techniques implantées pour la simulation d'instructions
+dans \simsoc,
+correspondant à différents compromis entre précision et efficacité.
+Ce sont:
+la \emph{simulation par interprétation},
+la \emph{traduction dynamique sans spécialisation}
+et la \emph{traduction dynamique avec spécialisation}.
+%
+La \emph{simulation par interprétation} est la méthode classique,
+qui comprend trois étapes:
+récupération de l'instruction en mémoire, décodage et exécution.
+Bien que cette technique soit handicapée par
+le décodage répété des mêmes instructions,
+elle est simple à réaliser et fiable.
+Elle sert également d'étalon de performance pour les autres techniques.
+%
+La seconde et la troisième technique sont basées sur la traduction dynamique,
+qui utilise une représentation intermédiaire pour le résultat du décodage.
+Les représentations intermédiaires des instructions décodées sont
+stockées dans un cache et réutilisées quand les mêmes instructions
+doivent être ré-exécutées.
+%
+La dernière méthode \emph{traduction dynamique avec spécialisation}
+combine traduction dynamique et \emph{évaluation partielle}.
+Cette dernière est une technique bien connue en compilation optimisante.
+L'idée est de traduire un programme $P$ appliqué à une donnée spécifique $d$
+en un programme spécifique plus rapide $Pd$.
+On peut utiliser l'évaluation partielle en simulation pour spécialiser 
+une instruction en une instruction plus simple,
+à partir des données connues au moment du décodage.
+Le décodeur de \simsoc implémente l'évaluation partielle.
+Au moment du décodage, la traduction dynamique établit une correspondance
+entre les instructions binaires et leurs spécialisations partiellement évaluées.
+Bien que la spécialisation des instructions induise un surcroît
+de consommation mémoire, ce dernier reste raisonnable rapporté
+aux tailles mémoire disponibles sur les serveurs actuels.
+
+Les technologies utilisées dans le simulateur de jeu d'instructions 
+de \simsoc sont détaillées dans~\cite{ossc09}.
+
+
+
+\subsubsection*{Performances}
+
+Le module ARM de \simsoc réalisant le jeu d'instruction de l'architecture
+ARMv5 a été écrit à la main.
+Le simulateur peut simuler le circuit commercial SPEAr Plus600,
+un SoC réalisé par ST Microelectronics comportant un système à double 
+c{\oe}ur et plus de 40 composants supplémentaires,
+ainsi que le circuit AM1705 de Texas Instruments.
+Le simulateur peut émuler le contrôleur d'interruptions,
+le contrôleur de mémoire,
+le contrôleur de mémoire série,
+le contrôleur Ethernet,
+et tous les périphériques nécessaires pour amorcer Linux.
+Exécuter le noyau Linux sur le simulateur de SPEAr Plus
+est un moyen de tester et mettre au point le simulateur.
+Tout d'abord le binaire du noyau Linux compressé est lu
+sur la mémoire série, décompressé, puis Linux est démarré.
+La simulation de ce processus ne prend que quelques secondes.
+Le contrôleur Ethernet peut connecter à travers le protocole TCP/IP
+plusieurs simulateurs du même SoC s'exécutant ou non sur la même machine.
+Ce simulateur mature pour l'architecture ARMv5 était terminé
+avant le début de notre projet de certification,
+et deux autres simulateurs de jeu d'instruction pour PowerPC
+et MIPS étaient également développés.
+
+
+\subsubsection*{De  l'ARMv5 à l'ARMv6}
+
+Pour cette thèse nous avons décidé de considérer la version suivante
+(ARMv6) de l'architecture ARM, qui représente une montée en performances
+depuis les c{\oe}urs ARMv5.
+Pour l'essentiel, ARMv6 est compatible en arrière avec ARMv5.
+Voici les nouveautés apparues dans l'architecture ARMv6.
+
+\begin{itemize}
+\item
+  Le jeu d'instructions a été étendu par de nouvelles instructions
+  dans six domaines: des instructions média, des instructions de multiplication,
+  des instructions de contrôle et DSP,
+  des instructions de chargement et stockage en mémoire,
+  des instructions indéfinies et
+  des instructions inconditionnelles.
+  Heureusement, toutes les instructions ARMv5 obligatoires sont également
+  instructions ARMv6 obligatoires.
+  Pour les utilisateurs du simulateur, un code applicatif compilé pour
+  l'ARMv5 s'exécute également sur l'ARMv6.
+  Si un utilisateur souhaite bénéficier des nouvelles instructions V6,
+  il doit recompiler son programme dans le nouvel environnement.
+\item 
+  Le mode \emph{Thumb} (instructions sur 16 bits) a changé.
+  Les instructions  \emph{Thumb} de l'ARMv5 ne sont pas portables vers
+  \emph{Thumb2} (ARMv6+), 
+  la compatibilité arrière n'est pas complètement assurée.
+\end{itemize}
+
+
+\subsection*{Contributions}
+\addcontentsline{toc}{subsection}{Contributions}
+
+Dans ce travail nous avons développé une preuve de correction 
+d'une partie du simulateur \simsoc.
+Au delà de la certification d'un simulateur,
+il s'agit d'une nouvelle expérience en certification de programmes
+non triviaux écrits en C.
+Contrairement aux approches répandues,
+nous n'utilisons pas une sémantique axiomatique
+mais une sémantique opérationnelle,
+en l'occurrence celle définie dans le projet \compcert.
+
+Nous définissons une représentation du jeu d'instruction ARM
+et de ses modes d'adressage formalisée en Coq,
+grâce à un générateur automatique prenant en entrée
+le pseudo-code des instructions issu du manuel de référence ARM.
+Nous générons également l'arbre syntaxique abstrait \compcert
+du code C simulant les mêmes instructions au sein de \simlight,
+une version allégée de \simsoc.
+Une version textuelle de \simlight, avait été auparavant développée
+comme un composant de \simsoc par C.~Helmstetter~\cite{rapido11}.
+
+À partir de ces deux représentations Coq,
+nous pouvons énoncer
+et démontrer la correction de \simlight,
+en nous appuyant sur la sémantique opérationnelle définie dans \compcert.
+Nos premiers résultats dans cette direction sont décrits dans~\cite{2011first}.
+Cette méthodologie a ensuite été appliquée à au moins une instruction
+de chaque catégorie du jeu d'instruction de l'ARM.
+
+Au passage, nous avons amélioré la technologie
+disponible en Coq pour effectuer des \emph{inversions},
+une forme de raisonnement utilisée intensivement
+dans ce type de situation~\cite{2013itp}.
+
+Nos contributions supplémentaires comprennent un générateur de
+décodeur pour les instructions ARM, également basé sur l'analyse du
+manuel de référence de l'ARM,
+et un générateur de tests pour le décodeur d'instructions,
+qui peut générer des tests massifs couvrant toutes les instructions ARM.
+
+\newpage
+\section*{Conclusion}
+\addcontentsline{toc}{section}{Conclusion}
+
+Nous avons développé la certification d'une partie de \simlight,
+un simulateur du jeu d'instructions ARM,
+en utilisant la sémantique opérationnelle du langage C fournie par le projet \compcert.
+Les preuves de correction ont été effectuées à l'aide de l'assistant à la preuve Coq.
+Une grande partie de la spécification Coq et du modèle du simulateur ont été produits
+automatiquement à partir du pseudo-code disponible dans le manuel de référence ARM.
+Une technique de preuve Coq pour effectuer des \emph{inversions} a été introduite
+pour résoudre des étapes de preuve administratives de manière plus satisfaisante
+que par les tactiques standard de Coq comme \inversion.
+Les termes de preuve engendrés par notre \hcinv ont par ailleurs une taille
+bien plus petite qu'avec \inversion,
+ce qui améliore la compilation Coq et fluidifie l'interaction avec Coq lors de la mise
+au point des scripts.
+Par ailleurs, nous avons construit un générateur de tests pour le décodeur 
+d'instructions ARM, qui génère des tests massifs couvrant toutes les instructions ARM.
+
+Dans la suite nous tirons quelques enseignements de notre usage 
+de la sémantique opérationnelle pour démontrer la correction de \simlight,
+quant à la faisabilité de cette approche pour la preuve de programmes C en général.
+Nous donnons quelques éléments chiffrés sur le développement de \simsoccert
+et précisons la base de confiance de ce projet.
+Nous terminons par quelques prospectives.
+
+
+\subsection*{L'approche sémantique opérationnelle en preuve de programmes C}
+
+La technique de certification employée pour \simlight est basée sur la sémantique
+opérationnelle de C fournie par \compcert. La représentation formelle des
+programmes C pour chaque instruction ARM peut être obtenue à partir 
+de l'AST représentant le pseudo-code de deux façons :
+soit en le traduisant en un AST \compcert C, 
+soit en le traduisant en une forme textuelle C,
+qui est ensuite donnée en entrée à l'analyseur syntaxique de \compcert C.
+Dans nos expériences, les deux approches donnaient des résultats équivalents.
+\compcert C supporte un sous-ensemble de C qui est suffisamment riche
+pour programmer la simulation des instructions de l'ARM dans \simlight.
+
+Les preuves de correction ont été effectuées dans l'assistant à la preuve Coq.
+Dans cette approche à la certification de programmes C, les étapes de preuve Coq
+ne sont pas simples. 
+Cependant nous avons pu considérer des programmes C ayant une spécification
+complexe et de grande taille, utilisant le pouvoir expressif de Coq.
+À partir de notre travail, nous pouvons conclure que l'approche
+par sémantique opérationnelle est utilisable.
+
+Les étapes de preuve liées à la sémantique de \compcert C peuvent être
+considérablement simplifiées par la définition de tactiques dans le langage Ltac de Coq.
+Notre premier script de preuve pour l'instruction ADC était long de 
+plusieurs milliers de lignes.
+Nous avons lors identifié les séquences répétées et commencé à définir
+nos propres tactiques en Ltac,
+ce qui a permis de raccourcir considérablement les scripts de preuve. 
+La seconde version du script pour la preuve de correction de ADC
+était environ trois fois plus petite que la première.
+Dans la conception de ces tactiques, nous n'avons pas recherché la généralité.
+Cependant, comme beaucoup d'instructions ARM d'une même catégorie
+se ressemblent, nos tactiques peuvent en fait être réutilisées.
+
+Dans la section~\ref{sec:tactic}, nous avons également introduit des tactiques
+générales pour \simsoccert,
+notamment pour trouver des fonctions dans le modèle mémoire de C, 
+réutiliser des opérations de \emph{load/store}, etc.
+Ces tactiques ne sont pas spécifiques à \simlight,
+elles sont seulement relatives à la sémantique que \compcert C et
+aux opérations en mémoire. 
+Il en va de même pour notre technique d'inversion:
+elle a été instanciée pour les besoins de \simsoccert comme une tactique
+\hcinv dédiée aux relations inductives définies dans \compcert
+(voir la section~\ref{ssec:invssc}).
+Cependant ces tactiques peuvent être réutilisées dans d'autres projets
+suivant la même approche pour démontrer la correction de programmes \compcert C,
+par exemple le projet CCCBIP qui a démarré récemment dans note groupe et vise
+à construire une compilateur certifiant prenant en entrée un langage
+de haut niveau à base de composants pour les systèmes embarqués (BIP),
+avec \compcert C comme cible intermédiaire.
+
+
+
+\subsection*{Inversion sur mesure}
+
+Notre inversion ``sur mesure'' (\emph{hand crafted})
+présentée au chapitre~\ref{cpt:inv} a été expérimentée sur des preuves
+de grande taille reposant sur de grosses relations inductives définies
+indépendamment dans le projet \compcert.
+Cela a joué un rôle crucial pour le succès de cette approche 
+aux preuves correction de programmes C,
+et le gain en flexibilité obtenu par \hcinv a été exploité pour
+produire des preuves bien plus petites, robustes et faciles à gérer.
+
+En l'état, ce n'est pas une tactique complètement automatique
+comme la tactique originale \inversion.
+Nous pensons qu'une telle automatisation pourrait être réalisée
+en interagissant avec les mécanismes internes de Coq.
+Cela pourrait être effectué pour des raisons d'efficacité et
+serait appréciable notamment dans les cas où les sous-buts engendrés
+pourraient être résolus automatiquement,
+ou sans qu'il soit besoin de référencer les noms produits par l'inversion.
+
+Mais dans un projet comme \simsoccert,
+qui comporte une spécification de grande taille
+et où les preuves nécessitent des mises au point fines,
+les interactions entre l'utilisateur et l'assistant à la preuve
+ne peuvent pas être évitées.
+En général, dans de telles situations, les énoncés mettent en {\oe}uvre
+des définitions arbitrairement complexes,
+et on ne peut faire l'hypothèse que des procédures de décision
+pourront tout résoudre.
+Le problème est alors de fournir des mécanismes appropriés,
+de sorte à faciliter l'écriture des scripts de preuve et l'interaction
+avec l'assistant de preuve.
+Nous pensons que notre technique d'inversion sur mesure est un bon outil
+de ce point de vue :
+elle est suffisamment souple pour l'utilisateur,
+les situations pratiques peuvent être gérées
+en contrôlant totalement les scripts
+et des améliorations intéressantes des scripts
+sont plus faciles à concevoir.
+
+Mentionnons une autre application possible de cette technique.
+Des inversions sont parfois nécessaires dans l'écriture d'une fonction
+dont les propriétés seront établies ultérieurement
+(à l'opposé du style où l'on fournit une spécification à la Hoare
+monolithique et exhaustive et un générateur de VC comme Program).
+Dans ce contexte, une utilisation simple du moteur de preuve
+et de la tactique \inversion a tendance à générer des termes
+extrêmement gros et compliqués à gérer.
+Notre technique devrait s'avérer très utile dans ce genre de situation.
+
+\subsection*{Taille du développement}
+
+\begin{table}[ht]
+  \centering
+  \begin{tabular}{|l|r@{~}|}
+    \hline
+    Manuel de référence ARM original (txt)  & 49655 \\
+    Analyseur ARM vers AST OCaml         & 1068 \\
+    Générateur (Simgen) pour l'ARM         &   10675 \\
+    Générateur de spécifications pour SH4      & 737 \\
+    Bibliothèques générales C sur l'ARM         & 1852 \\
+    Bibliothèques générales Coq sur l'ARM         & 1569 \\
+    Code C généré pour les opérations ARM \simlight   & 6681 \\
+    Code Coq généré pour les opérations ARM   & 2068 \\
+    Code Coq généré pour le décodeur ARM  & 592 \\
+    Projection   & 857 \\
+    Script de preuve pour ADC (2011)    & 3171 \\
+    Script de preuve pour ADC (2012)    & 1204 \\
+    Définition de \hcinv       &551\\
+    Autres tactiques       &185\\
+%% Xiaomu: please complete
+    Script de preuve pour fonctions auxiliaires   & 856 \\
+    Script de preuve pour BL (2012)   & 437 \\
+    Script de preuve pour LDRB (2012)   & 170 \\
+    Script de preuve pour MRS (2012)   & 322 \\
+    \hline
+  \end{tabular}
+  \smallskip
+  \caption{Tailles (en nombre de lignes)}
+  \label{tab:sizesfr}
+\end{table}
+
+La table~\ref{tab:sizesfr} indique la taille de notre développement.
+La taille du générateur atteint presque le nombre total de lignes
+des parties générées pour l'ARMv6.
+Mais il faut noter qu'il s'agit ici de la version courante refaite
+par F.~Tuong pour généraliser le procédé à d'autres processeurs.
+Actuellement, en dehors de l'ARM, cette chaîne de génération est
+également appliquée au manuel de référence du processeur SH4 où,
+à la place d'un pseudo-code spécifique,
+les instruction sont décrites dans la syntaxe du langage C.
+
+On peut également noter que le code généré pour le simulateur de
+jeu d'instructions occupe 50\:\% du modèle formel Coq,
+et presque 70\:\% du simulateur C.
+
+Bien que le gain en volume puisse être considéré comme relativement faible,
+nous pensons que cette approche est néanmoins valable
+étant donnée la nature répétitive des instructions.
+
+En ce qui concerne l'effort de preuve,
+la première expérience a porté sur la correction de l'instruction ADC
+et cela nous a pris un mois.
+Le nombre de lignes Coq pour le script de preuve était alors
+assez grand, environ 3200 pour cette première version
+(surtout si l'on compare aux 11 lignes du pseudo-code correspondant
+dans le manuel de référence).
+À ce stade nous n'avions pas encore développé de tactiques utilisateur.
+Ensuite, en utilisant \hcinv et nos autres tactiques spécifiques,
+en dehors des gains en taille et en maintenabilité,
+le temps de développement pour la preuve d'une instruction est bien plus
+faible,
+moins d'une semaine pour une instruction du même degré de complexité que ADC.
+A présent, nous avons une preuve de correction pour 11 instructions,
+une dans chaque catégorie d'instructions pour l'ARM.
+Elles sont présentées dans la table~\ref{tab:prvinstfr}.
+
+\begin{table}[ht]
+  \centering
+  \begin{tabular}{|l|l|}
+    \hline
+    Catégorie & Nom de l'instruction \\
+    \hline
+    branchement & BL \\
+    calcul & ADC \\
+    multiplication & MUL \\
+    addition et soustraction en arithmétique parallèle  & QADD16 \\
+    instruction étendue & UXTAB16 \\
+    arithmétique divers & CLZ \\
+    accès au registre de status  & MRS \\
+    chargement et stockage & LDR \\
+    chargement et stockage multiple & LDM \\
+    sémaphore & SWP \\
+    \hline
+  \end{tabular}
+  \smallskip
+  \caption{Instructions ARM avec une preuve de correction}
+  \label{tab:prvinstfr}
+\end{table}
+
+\subsection*{Base de confiance du code}
+
+Nos preuves dépendent de plusieurs outils développés ailleurs:
+l'assistant à la preuve Coq,
+le compilateur OCaml et le compilateur certifié \compcert C.
+La base de confiance de ces outils doit être considérée indépendamment.
+En ce qui concerne Coq, il s'agit essentiellement du noyau.
+
+Ensuite, la base de confiance comprend la version formelle
+du manuel de référence servant à formuler les théorèmes
+de correction:
+il s'agit de définitions Coq produites manuellement et automatiquement,
+selon le procédé décrit en figure~\ref{fig:arch}.
+Une alternative pourrait être de remplacer les définitions Coq produites
+automatiquement par le manuel de référence textuel (corrigé par nos soins)
+et la chaîne de génération de code Coq.
+
+La base de confiance comprend enfin
+les projections définies en Coq entre la représentation du code
+de \simlight sous forme d'AST \compcert C
+et notre modèle Coq abstrait.
+
+\subsection*{Travaux futurs}
+
+La prochaine étape serait d'étendre le travail effectué sur
+\texttt{ADC} et les autres opérations données dans la table~\ref{tab:prvinstfr}
+au jeu d'instruction entier.
+Nous somme confiants dans le fait que le travail correspondant peut être effectué
+beaucoup plus vite.
+En particulier, des lemmes portant sur 14 fonctions de la bibliothèque
+sont déjà disponibles.
+Il reste 71 fonctions semblables dans la librairie.
+
+Les AST des fonctions de la bibliothèque sont obtenus au moyen de l'analyseur
+syntaxique pour \compcert C.
+Ces AST sont actuellement regroupés à la main avec les AST des instructions,
+pour résoudre le problème technique mentionné page~\pageref{page:libfunast}.
+Il serait préférable d'introduire un mécanisme permettant
+de trouver automatiquement les fonctions appelées dans les AST produits
+par l'analyse syntaxique et de générer des numéros de blocs inutilisés
+pour les identificateurs correspondants.
+
+Nous avons également tenté d'écrire une version Coq (fonctionnelle)
+du décodeur,
+mais des améliorations importantes sont nécessaires pour le rendre utilisable.
+La version courante est basée sur un filtrage géant,
+qui considère les 32 bits d'une instruction binaire
+dans un ordre soigneusement mis au point.
+Nous avons commencé à concevoir une meilleure version de ce décodeur,
+en considérant la sémantique des champs de bits.
+%
+Cela fait, des preuves sur le décodeur pourront également être considérées.
+Les outils d'extraction automatique du codage des instructions décrit dans
+le manuel de référence sont déjà disponibles.
+%
+Enfin, la correction de la boucle de simulation
+(essentiellement : répéter le décodage et l'exécution des opérations)
+pourra être prouvée.
+
+Dans une autre direction, notre méthodologie peut être réutilisée sur
+d'autres processeurs, comme le SH4.
+
+Par la suite, on pourra également considérer \simlight 2,
+qui comporte plusieurs optimisations en vue d'accélérer
+la simulation.
+La différence la plus importante est l'application d'une
+méthode de \emph{flattening} (voir \S~\ref{sec:codegen})
+consistant à fusionner le code des modes d'adressage dans 
+certaines instructions.
+Le décodeur de \simlight 2 décode alors simultanément 
+une instruction et son mode d'adressage.
+Cela rend la définition en C plus simple que dans \simlight
+et produit moins d'appels de fonctions.
+Les preuves correspondantes pour le décodeur devraient donc êtr
+plus simples pour \simlight 2 que pour \simlight.
+%
+Le corps des instructions est essentiellement le même dans \simlight 2
+que dans \simlight.
+La principale optimisation effectuée dans \simlight 2 consiste à
+spécialiser certains paramètres aux valeurs effectives utilisées.
+Ainsi, l'opération d'une instruction ARM est implémentée
+par plusieurs fonctions dans \simlight 2, là où il n'y a qu'une seule fonction
+dans \simlight ;
+mais le code de ces fonctions est essentiellement le même,
+ce qui donne bon espoir à la possibilité de réutiliser
+les lemmes de correction existants pour \simlight,
+en les reformulant et généralisant de manière adéquate,
+de sorte que par instanciation on retrouve les lemmes
+de correction attendus pour les fonctions correspondantes dans \simlight 2.
+
+Notre équipe a récemment démarré un autre projet visant
+l'implantation de logiciel certifié écrit en BIP,
+un langage de haut niveau à base de composants dédié aux systèmes embarqués,
+avec \compcert C comme langage intermédiaire.
+Nous avons bon espoir que le travail présenté dans cette thèse
+pourra être réutilisé.
+%
+Plus généralement,
+notre réalisation de \hcinv pour \compcert peut être réutilisée
+dans toute application visant à prouver la correction de programmes C
+à partir de la sémantique opérationnelle définie dans \compcert.
+Cependant, cette tactique doit évoluer en fonction 
+des nouvelles versions de \compcert.
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\selectlanguage{english}
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "thesis"
+%%% End: 

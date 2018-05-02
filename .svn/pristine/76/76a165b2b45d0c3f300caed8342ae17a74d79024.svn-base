@@ -1,0 +1,139 @@
+== General questions ==
+
+1) An important choice of yours is to use CompCert-C language instead
+of the C-light language. You justify this choice with two
+reasons. First you say that the code is easier to generate, without
+the need of introducing intermediate variables: this is OK for me. The
+second reason given is that the semantics
+is non-deterministic. I don't understand why it is good point. Anyway
+I even wonder if the Simlight C code really has
+non-deterministic expressions: I would guess it hasn't. Am I wrong ?
+
+Indeed, I feel that a really important issue is that the operational
+semantics is defined by an inductive relation, and not a function, in
+other words it is not executable. One may think that using an
+executable semantics could have made the proofs significantly
+simpler. In particular the issues with inversion would not show
+up. Any comments?
+
+
+2) About the claim it is ``the largest effort of proving a code
+directly on the semantics''. I feel it is a quite shallow claim. To
+deal with your proof, you had to design several Coq tactics to work
+more easily with the operational semantics. But
+program logics like Hoare logic, Weakest Preconditions are not
+fondamentally different from a set of high-level tactics to reason
+about the execution of a program. There is no clear frontier. There
+are several examples of tools where proofs can be conducted partially
+interactively that are not far from your approach. For example the
+L4.verified project is based on an operational semantics of C written
+in Isabelle/HOL, and the approach they followed is not so different
+from yours: a model is written in Haskell, translated into properties
+of the C code written in Isabelle, with a big projection relating the
+C state to the abstract state. They build the proofs interactively with 
+well-designed tactics. Another example is the KeY project,
+which is an environment for proving Java programs, based on an
+operational semantics (dynamic logic) and the proofs are conducted
+semi-interactively using flexible tactics. Users of KeY sometimes
+claim they prove programs using ``symbolic execution'' which is I
+guess another way to say that the proof is conducted on the
+operational semantics. Another system I have in
+mind is JavaFan built on top of Maude, and I think they have also
+designed an operational semantics of C. I think they are several other
+similar related approach.
+
+Any comments ?
+
+== Minor remarks ==
+
+Note: when I just put a word or a sentence between quotes, it means it
+is a typo or a wrong spelling that should be fixed.
+
+
+p7: ``Schorr Wait'' should be ``Schorr-Waite''
+
+p8 : ``Up to our knowledge ... at this scale'' see the general remark
+above about L4.verified, KeY project, etc.
+
+p18: paragraph on Herms' thesis: it's pleasing for me that you
+mention it, but the relation with your own thesis is unclear. Indeed
+there is a relation: Herms' work is based on compcert operational
+semantics: but you don't say it!
+
+p24: the rule for evaluation ``A e'' is over complicated: you should
+remove the second premise and simply returns ``n1,n1'' (indeed as the
+Coq formalization you do later on page 29)
+
+p26: rule (2.10) should return directly ``C n,n''
+
+
+p28: ``ese 2.1'' ???
+
+p31: ``for for''. Beware that the statement ``to automatically prove a
+formula, it should belong to a semi-decidable class of problems''
+is simply wrong.
+
+p34: Acronym ``ISS'' is not defined before, as far as I can see.
+
+p34: ``abd''
+
+p35: ``These ... abstract signature radix-2 search tree'': I don't
+understand this sentence. ``cortesponds''
+
+
+p36. Fig 2.4: I'm confused because these rules do not seem
+non-deterministic: I think I'm missing something...
+
+p39: ``At the beginning of this chapter, we ...'' but we are at the
+beginning of the chapter! The ``Résumé'' is empty... (same problem in
+other chapters)
+
+p43: ``If the S bit is set and register Rn is...'' you mean Rd, not
+Rn, right?
+
+p45: the Coq codes are missing the curly brackets everywhere! same on
+page 46 and others.... you need to add backslashes in Latex : \{ and
+\}
+
+p47: ``textitO_Coq''
+
+
+p50: ``mathching''
+
+p54: Fig 4.1: giving the definition of struct SLv6_StatusRegister may
+help the reader
+
+p56: ``is not marginal'': you mean ``is marginal'', I guess
+
+p60: ``experssions'' ``can occur side-effect''
+
+p62: ``seconde''
+
+p64: ``... are obtained, the better, is in order ...'' is really
+not understandable.
+
+p67: ``correcness''
+
+p68: ``variables it easy''
+
+p69: ``expressionThe''
+
+p71: ``Fort'' twice
+
+p74: ``profection''
+
+p80: ``evelauation''
+
+p81: ``wich is neeeded''
+
+p86: ``dicuss''. subsection numbering is wrong in this section 6.6.
+
+p92: ``experience''
+
+p95: ``Remark ... in system F'': are we as readers supposed to
+immediately understand that remark ?
+
+
+p112: ``espcecially''
+
+p113: ``I particular''

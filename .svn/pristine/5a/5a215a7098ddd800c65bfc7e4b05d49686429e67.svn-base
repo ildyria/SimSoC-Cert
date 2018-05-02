@@ -1,0 +1,5 @@
+\begin{coqdoccode}
+\coqdocindent{3.00em}
+\coqdocvar{diag} \coqdocvar{x} := \coqdockw{match} \coqdocvar{x} \coqdockw{with} 3 \ensuremath{\Rightarrow} 4 = 7  \ensuremath{|} \coqdocvar{\_} \ensuremath{\Rightarrow} \coqdocvar{True} \coqdockw{end}\coqdoceol
+\coqdocnoindent
+\end{coqdoccode}

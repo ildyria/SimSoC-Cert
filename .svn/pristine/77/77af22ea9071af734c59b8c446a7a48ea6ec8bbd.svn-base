@@ -1,0 +1,53 @@
+\section{Conclusion}
+\label{sec:conclusion}
+
+The technique introduced in \cite{small_inv}
+on very small toy examples
+could be successfully used in a significant application,
+up to suitable extensions in order to conveniently get
+the premises of a constructor in non-absurd cases.
+As in \cite{small_inv},
+we don't claim that we have a fully automated tactic,
+like \inversion.
+Our goal is more modest:
+providing a hand-crafted inversion technique 
+which is flexible enough for the user,
+so that most practical situations can be managed
+with a full control on the script and valuable
+improvements on robustness.
+Moreover, the extra flexibility provided by hand-crafted inversions can
+be exploited to produce smaller, more manageable proof terms.
+
+Our method was experimented on large proofs relying on 
+big inductive relations independently defined in the Compcert project.
+
+The current development can be found on-line\footnote{%
+\label{f:site}
+%\url{http://formes.asia/media/simsoc-cert/}}
+\url{http://www-verimag.imag.fr/~monin/Proof/SmallInvScalesUp/}
+}.
+
+Our group recently started another project dedicated
+to a certifying compiler from a high-level component-based language dedicated
+to embedded systems (BIP), with CompCert C as its target. 
+We expect the work presented here and our high-level tactics
+to be reused there.
+
+Let us mention another possible application of the technique.
+Inversion is sometimes
+needed to write a function whose properties will be established later (as
+opposed to providing a monolithic and exhaustive Hoare-style specification and
+along with a VCC generator such as Program). 
+In this context simply using the proof engine and the \inversion tactic
+tends to generate unmanageably large terms.
+We can expect our technique could be very helpful in such situations.
+
+
+% and the line-count metrics given at the end of \cite{small_inv} makes sense
+
+
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "cpp12"
+%%% End: 

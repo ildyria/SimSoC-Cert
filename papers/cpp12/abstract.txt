@@ -1,0 +1,10 @@
+Title: Scaling up Small Inversions
+
+Abstract:
+
+When reasoning on formulas involving large-size inductively defined relations, such as the semantics of a real programming language, many steps require the inversion of a hypothesis. The built-in "inversion" tactic of Coq can then be used, but it suffers from severe controllability and efficiency issues.
+A proof-trick called small inversions by one of the co-authors provides a part of the solution. It is based on a suitable diagonal auxiliary predicate. However, many important practical situations are not covered by this technique.
+We present here an improvement inspired by the impredicative encoding of inductive data-structures. Our experiments in the SimSoC-Cert project show that this technique successfully scales up to proofs of non-trivial programs according to the operational semantics of C as defined in Compcert.
+
+
+

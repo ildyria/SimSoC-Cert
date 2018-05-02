@@ -1,0 +1,14 @@
+Claude:
+
+>> what's the difference between set_reg and set_reg_or_pc?
+
+In the ARM architecture, the PC is the register number 15.
+As a consequence, many instructions can be used as a branch instructions,
+even if it is not their first use (e.g., SUB PC, PC, #8 is a valid branch
+instruction).
+Because the semantics function of each instruction must return with a flag
+telling if it was a branch (in addition of the new state), we must check
+whether any register modification affects the PC.
+In some cases, we know that the destination register cannot be the PC,
+because a test Rd!=15 has been executed before. So we can call "set_reg"
+directly.

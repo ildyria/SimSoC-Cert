@@ -1,0 +1,1148 @@
+\chapter{Background}
+\label{cpt:bg}
+
+\newcommand{\toyl}{\textit{ese}\xspace}
+
+%\jf{Short introduction in 2 or 3 sentences}
+This chapter provides a short introduction to the scientific background
+of our work:
+operational semantics,
+to define the meaning of programs;
+the Coq proof assistant,
+which is used to define the formal model of ARMv6 architecture and to perform
+correctness proofs;
+finally \compcert, which contains an operational semantics of C formalized in Coq,
+and is then the basis of
+the formal model that we use for the instruction set simulator \simlight.
+We pay a particular attention on underspecified behaviours:
+this happens when different compilation strategies may
+provide different behaviours for the same program, as is the case for C.
+Such issues are illustrated on a very simple toy language, \toyl.
+% which \compcert C semantics follows.
+% Then a introduction on Coq, which is the language
+% used to define the formal model of ARMv6 architecture and to perform
+% the correctness proof.
+% The last section gives a brief idea on \compcert project and
+% which parts we have used to support our correctness proof.
+
+\selectlanguage{french}
+\section*{Résumé}
+
+\begin{resume}
+Ce chapitre contient une courte introduction au cadre scientifique
+dans lequel notre travail a été developpé.
+On commence par quelques notions de sémantique opérationnelle,
+permettant de définir la signification des programmes.
+On présente ensuite l'assistant à la preuve Coq,
+que nous avons utilisé pour définir notre modèle formel de l'architecture
+ARMv6 et d'effectuer des preuves de correction.
+Nous terminons par \compcert,
+qui fournit notamment une sémantique opérationnelle de C
+formalisée en Coq --
+c'est l'ingrédient essentiel que nous utilisons pour produire un modèle formel
+du simulateur d'instructions \simlight.
+
+Une attention particulière est portée aux comportement sous-spécifiés :
+cela se produit lorsque différentes stratégies de compilation peuvent
+aboutir à des comportements différents pour un même programme,
+ce qui est le cas avec le langage C.
+Pour illustrer ce genre de problèmes,
+nous introduisons un langage jouet, \toyl,
+contenant des expressions avec effet de bord.
+  
+\end{resume}
+
+\selectlanguage{english}
+
+\section{Operational Semantics}
+\label{sec:opsem}
+In computer science, there are three traditional ways to express how programs
+perform computations:
+% evaluate: % JF: "evaluate" seems correct but I feel more secure with "perform computations"
+axiomatic semantics, denotational semantics, and
+operational semantics.  Formal semantics are important because it can
+give an abstract, mathematical,
+and standard interpretation of a programming language.
+It helps to understand what a program written in this language does
+and to verify what we expect from the program.
+In a few words:
+\begin{itemize}
+\item Denotational semantics constructs mathematical objects which
+  describe the meaning of expressions of the language using stateless
+  partial \emph{functions}.
+  All observably distinct programs have distinct denotations.
+\item Operational semantics is more concrete because it is based
+  on states. However, in contrast with a low-level implementation,
+  operational semantics considers abstract states.
+  The behavior of a piece of program corresponds to a transition
+  between abstract states.
+  This transition relation allows us to define the execution of programs
+  by a mathematical computation \emph{relation}.
+  This approach is quite convenient for proving the correctness
+  of compilers, using operational semantics for the source and target
+  languages (and, possibly intermediate languages).
+  Operational semantics is used in \compcert to define the execution
+  of C programs,
+  or more precisely programs in the subset of C considered by the
+  \compcert project.
+  The work presented in this thesis is based on this approach.
+\item Axiomatic semantics describes the effect of programs by
+  assertions. A well-known example is Hoare logic.
+  It is one of the most popular approaches for proving the
+  correctness of programs.
+\end{itemize}
+
+% The distinctions between the three broad classes of approaches can
+% sometimes be vague, but
+% all known approaches to formal semantics use
+% the above techniques, or some combination of them.
+A good tutorial on programming language semantics is
+Benjamin C. Pierce's \emph{Software Foundation}%
+\footnote[1]{http://www.cis.upenn.edu/~bcpierce/sf/}.
+It is mainly dedicated to operational semantics
+and it contains an introduction to Hoare Logic.
+The material presented in this tutorial is formalized
+in the Coq proof assistant.
+Another interesting introduction can be found in \cite{nielson1992semantics}.
+It is more detailed than \emph{Software Foundation},
+but it is not supported by a proof assistant.
+
+
+Operational semantics can be used to reliably prove results
+on a programming language.
+Operational semantics can be presented in two styles.
+Small-step semantics,
+often known as structural operational semantics,
+is used to describe how the single steps of computations evaluate.
+The other is big-step semantics, or natural semantics,
+which returns the final results of an execution in one big step.
+The corresponding transition relation is defined by rules,
+according to the syntactic constructs of the language,
+in a style which is inspired by natural deduction.
+
+The book \cite{nielson1992semantics} explains
+that the choice between small-step semantics
+and big-step semantics depends on the objective.
+They sometimes can be equivalent.
+But in general, they provide different views of the same language % evaluations
+and we have to choose an appropriate one for a particular usage.
+Moreover, some language constructs can be hard or even impossible to define
+with one of these semantics
+whereas it is easy with the other style.
+In general, when big-step semantics can be used,
+it is simpler to manage than small-step semantics.
+
+% \newcommand{\ANum}{\ensuremath{\mathit{A\!Num}\xspace}}
+% \newcommand{\APlus}{\ensuremath{\mathit{A\!Plus}\xspace}}
+% \newcommand{\AMinus}{\ensuremath{\mathit{A\!Minus}\xspace}}
+% \newcommand{\AMult}{\ensuremath{\mathit{A\!Mult}\xspace}}
+
+In order to illustrate some issues on operational semantics
+and its different flavors
+which are important for us,
+let us consider a simple language called \toyl,
+for expressions with side-effects.
+This language allows us to present some typical issues of C language,
+related to the the evaluation order of expressions and statements.
+The ISO-C standard that mentions the evaluation order of
+expressions with side-effect on the same object is undefined, for example:
+
+\begin{alltt}
+  i = ++i + 1;
+  a[i++] = i;
+\end{alltt}
+
+Several orders are allowed for each of the previous assignments,
+because they include two side effects on variable \texttt{i} --
+according to ISO-C standard, there are two ``sequence points'' in them.
+% before and after the statement.
+
+Other examples are given by Brian Campbell in the
+CerCo project~\cite{campbell2012executable},
+in order to show that the evaluation order constraints in C
+are very lax and not uniform.
+
+\begin{alltt}
+  x = i++ && i++;
+  x = i++ & i++;
+\end{alltt}
+
+Our toy language \toyl is designed to illustrate similar issues.
+The constructs of \toyl are:
+constants $C~n$, where $n$ is a natural number,
+a unique variable $V$,
+the addition $P\:\toyl~\toyl$ of two arguments of type \toyl,
+and the assignment of the variable with a value expressed by an \toyl.
+Its abstract syntax is as follows.
+
+\begin{figure}[h]
+% $$a,~b~::=~\ANum~n~|~\APlus~a~b~|~\AMinus~a~b~|~\AMult~a~b$$
+$$\toyl~::=~C~n~|~V~|P~\toyl~\toyl~|~A~\toyl~$$
+\caption{Syntax of toy language \toyl}
+\label{fig:syn}
+\end{figure}
+
+% \newcommand{\bsarr}{\ensuremath{\overset{bs}{\rightarrow}}}
+% \newcommand{\ssarr}{\ensuremath{\overset{ss}{\rightarrow}}}
+\newcommand{\bsarr}{\ensuremath{\xrightarrow{\;bs\;}}}
+\newcommand{\ssarr}{\ensuremath{\xrightarrow{\;ss\;}}}
+
+The semantics in big-step style is inductively defined using the following
+rules. The parameter $state$ of type natural number
+is introduced here to store the current value of $V$.
+After an evaluation, a new $state$ is returned. The evaluation takes an initial
+state and an expression to compute, and returns a new state and
+a natural number which is the evaluation result.
+The notation $\bsarr$ means ``evaluates to''.
+
+\medskip
+\begin{figure}[h]
+\begin{equation}
+\frac{}{st,~C~n~\bsarr~st',~n}
+\end{equation}
+\begin{equation}
+\frac{}{st,~V~\bsarr~st,~st}
+\end{equation}
+\begin{equation}
+\frac{st,~e_1~\bsarr~st',~n_1~\qquad st',~e_2\bsarr~st'',n_2}{st,~P~e_1~e_2~\bsarr~st'',~(n_1~+~n_2)}
+\end{equation}
+\begin{equation}
+\frac{st,~e~\bsarr~st',~n_1~\qquad n_1,~V~\bsarr~st'',n_2}{st,~A~e~\bsarr~st'',~n_2}
+\label{eq:bsassign}
+\end{equation}
+%$$\frac{st,~e~\bsarr~st',~n}{st,~A~e~\bsarr~n,~n}$$
+\caption{Big-step operational semantics of the toy language \toyl}
+\label{fig:bssem}
+\end{figure}
+
+%%Add simplified assignment rule
+Rule~\ref{eq:bsassign} is for assignment.
+A simpler and equivalent version is:
+\begin{equation}
+\frac{st,~e~\bsarr~st',~n}{st,~A~e~\bsarr~n,~n}
+\label{eq:bsassign_simpl}
+\end{equation}
+The version given in rule~\ref{eq:bsassign}
+is closer to
+the small-step semantics to be presented later,
+which exposes an explicit evaluation order.
+To this effect, 
+the assignment is split into two parts:
+evaluating the right-hand side
+then putting the result into the left-hand side.
+
+% Note that an assignment is split into two parts:
+% evaluation of the right-hand side
+% then putting the result into the left-hand side.
+
+\newcommand{\progtwo}{\ensuremath{P\;V\;(P\;(A\;(C\;1))\;(A\;(C\;2)))}\xspace}
+%
+For instance, from the state where \texttt{V} contains 0,
+the expression in C syntax\\
+\mbox{}\hfil\texttt{V + ((V = 1) + (V = 2))}\\
+evaluates to 3, with a final state where \texttt{V} contains 2.
+This expression is formalized by the term
+$\progtwo$,
+and the previous statement is formalized by:
+$$0, \progtwo \bsarr 2, 3.$$
+This statement is proved by systematic applications
+of the rules given in Figure~\ref{fig:bssem}.
+The proof is driven by the shape of the expression.
+Each constructor ($C$, $V$, $P$, $A$) is handled by a specific rule
+and leads to premises with smaller expressions (in this language),
+which means that
+the execution will terminate for any expression.
+Moreover, the semantics defined here is deterministic;
+the evaluation order is leftmost and
+innermost. This is expressed by the following lemma:
+%
+\begin{lemma}
+If $st,~t~\bsarr~st'~v$, and $st,~t~\bsarr~st''~v'$, then $v~=~v'~$ and $st~=~st''$.
+\label{lem:dettoyl}
+\end{lemma}
+
+Using big-step semantics, we can also describe a non-deterministic
+system by
+adding one rule for right to left evaluation to offer another evaluation order:
+\begin{equation}
+\frac{st,~e_2~\bsarr~st',~n_2~\qquad st',~e_1\bsarr~st'',n_1}{st,~P~e_1~e_2~\bsarr~st'',~(n_1~+~n_2)}
+\end{equation}
+
+Then the output of the evaluation cannot be predicted:
+the same expression can return different states and results.
+For instance, we have
+\begin{center}
+$0, \progtwo \bsarr 2, 3$\\
+$0, \progtwo \bsarr 1, 3$\\
+$0, \progtwo \bsarr 2, 5$\\
+$0, \progtwo \bsarr 1, 4$\\
+\end{center}
+
+Next, the following description gives
+the small-step operational semantics rules of the same toy language.
+This time, the small-step rules take an expression of type \toyl
+and the initial state which stores the
+current value of variable $V$, and return the reduced expression
+and the new state.
+The symbol $\ssarr$ means ``reduces to in one small step''.
+
+\medskip
+\begin{figure}[h]
+\begin{equation}
+\frac{}{V,~st~\ssarr~(C~st),~st}
+\label{eq:ssV}
+\end{equation}
+\begin{equation}
+\frac{}{(P~(C~n_1)~(C~n_2)),~st~\ssarr~(C~(n_1~+~n_2)),~st}
+\label{eq:ssCC}
+\end{equation}
+\begin{equation}
+\frac{e_1,~st~\ssarr~e_1',~st'}{(P~e_1~e_2),~st~\ssarr~(P~e_1'~e_2),~st'}
+\label{eq:ssP}
+\end{equation}
+\begin{equation}
+\frac{e_2,~st~\ssarr~e_2',~st'}{(P~(C~n_1)~e_2),~st~\ssarr~(P~(C~n_1)~e_2'),~st'}
+\label{eq:ssPC}
+\end{equation}
+\begin{equation}
+\frac{}{(A~(C~n)),~st~\ssarr~V,~n}
+\label{eq:ssAC}
+\end{equation}
+\begin{equation}
+\frac{e,~st~\ssarr~e',~st'}{(A~e),~st~\ssarr~(A~e'),~st'}
+\label{eq:ssA}
+\end{equation}
+\caption{Small-step operational semantics of the toy language \toyl}
+\label{fig:sssem}
+\end{figure}
+
+In small-step semantics,
+two rules (\eqref{eq:ssP} and \eqref{eq:ssPC}) are needed
+to define the leftmost and innermost evaluation order.
+And there is no rule for reducing a single constant.
+From the number of rules, we see that the definition of
+deterministic computations with a given evaluation order
+is more complex
+with small-step operational semantics
+than with big-step semantics.
+%The rules above give a deterministic semantics.
+
+We can also have a non-deterministic small-step semantics
+by modifying one of the rules of the plus operation
+to remove the leftmost and innermost order:
+changing rule \eqref{eq:ssPC} in Figure~\ref{fig:sssem} into:
+\begin{equation}
+\frac{e_2,~st~\ssarr~e_2',~st'}{(P~e_1~e_2),~st~\ssarr~(P~e_1'~e_2),~st'}
+\end{equation}
+
+Considering the set of possible executions allowed by the
+non-deterministic semantics, we have more
+results by using small-step semantics than using big-step semantics.
+Taking the same example \progtwo as above,
+the possible executions in small-step semantics are:
+
+\begin{center}
+$0, \progtwo \ssarr 3, 1$\\
+$0, \progtwo \ssarr 3, 2$\\
+$0, \progtwo \ssarr 4, 1$\\
+$0, \progtwo \ssarr 5, 2$\\
+$0, \progtwo \ssarr 6, 2$\\
+\end{center}
+
+%\jf{The last result is obtained by performing [COMPLETE]}
+The last result is obtained by performing the assignment $A~(C~1)$,
+then the assignment $A~(C~2)$; at this point, the value stored in the state
+equals $2$. Next, performing plus in any order will compute the
+result of 6 and the state still stores $2$.
+On the other hand,
+the big-step semantics fails to express that 6 can be returned.
+
+In contrast with big-step semantics,
+the sequence corresponding to an assignment
+(evaluation the right-hand side,
+then putting the result into the left-hand side)
+can actually be interrupted
+when we consider small-step semantics,
+and the evaluation of another sub-expression can then occur.
+
+In general,
+big-step semantics is not the right approach for dealing with non-deterministic
+executions or under-specified semantics,
+because it is not able to cover all the possible execution cases.
+
+Note that \compcert includes a big-step deterministic semantics
+and a small-step non-deterministic semantics for \compcert C.
+
+% \jf{add executions of the example above, showing we have more results than bs.
+% conclude bs is not the right approach for non-deterministic executions,
+% under-specified semantics. For instance, \compcert C includes bs determinist semantics,
+% and ss non-deterministic semantics}
+
+% \hide{
+% The future of program verification is to connect machine-verified
+% source programs to machine-verified compilers, and run the object
+% code on machine-verified hardware. To connect the verifications end to
+% end, the source language should be specified as a structural
+% operational semantics represented in a log- ical framework; the target
+% architecture can also be specified that way. Proofs of source code can
+% be done in the logical framework, or by other tools whose soundness is
+% proved w.r.t. the operational semantics specification; these may be in
+% safety proofs via type-checking, correctness proofs via Hoare Logic,
+% or (in source languages designed for the purpose) correctness proofs
+% by a more expressive proof theory.  The compiler -- if it is an
+% optimizing compiler -- will be a stack of phases, each with a well
+% specified operational semantics of its own. There will be proofs of
+% (partial) correctness of each compiler phase, or witness-driven
+% recognizers for correct compilations, w.r.t. the operational
+% semantics’s that are inputs and outputs to the phases.
+% }
+
+\section{Coq}
+
+\subsection{Short introduction}
+
+%\jf{Some details can be given for a non-specialist.}
+%
+Coq\cite{coqart} is an interactive theorem prover,
+implemented in OCaml.
+It allows the expression of mathematical assertions,
+mechanically checks proofs of these assertions, helps to find formal proofs,
+and extracts a certified program from the constructive proof
+of its formal specification.
+% Coq works within the theory of the calculus of inductive constructions,
+% a derivative of the calculus of constructions.
+% Coq implements a dependently typed functional programming language.
+Coq can also be presented as a dependently typed $\lambda$-calculus
+(or functional language).
+Here we just illustrate the syntax on simple examples.
+For a detailed presentation,
+the reader can consult \cite{coqmanual} or \cite{coqart}.
+%\jf{Use appropriate fonts.}
+\begin{itemize}
+\item $fun~(n:nat)~\Rightarrow ~n$ is the identity function on natural numbers;
+  its type is written as $nat~\rightarrow ~nat$. Function application is not written
+  as $f(x)$ but $f\; x$, or $(f\; x)$ if grouping is needed.
+  With several arguments, the syntax is $f~x~y$ or $(f~x~y)$ instead of $f(x,~y)$.
+\item We can write definitions as follows:
+
+  $${\tt Definition~idn~:=~fun~(n:~nat)~\Rightarrow ~n.}$$
+
+  An equivalent and more common syntax for this definition is:
+
+  $${\tt Definition~idn~(n:~nat)~:=~n.}$$
+
+  For instance, the application of $idn$ to 3 is written $(idn 3)$ and
+  this term reduces to 3.
+\item $fun~(X:~Type)~(n:~X)~\Rightarrow ~n$ is the \emph{polymorphic}
+  identity function on an arbitrary type $X$;
+  its type is written $\forall ~X:~Type,~X~\rightarrow ~X$.
+
+  $${\tt Definition~id~(X:~Type)~(n:~X)~:=~n.}$$
+
+  Note that it expects 2 arguments, for instance, we can write $(id~nat~3)$.
+  Like most of functional programming languages, Coq can also perform type inference.
+  If we define $id$ as following:
+
+  $${\tt Definition~id~\{X:~Type\}~(n:~X)~:=~n.}$$
+
+  The application can be just written as $id~3$. Coq can get the explicit $X$ from
+  the type of $3$.
+\item
+ % \jf{Give an example of a function with 1st order dependent types.
+ %  Could be $\forall n:nat, n> 0 \rightarrow nat$; do NOT put all the code
+ %  o the fct, just a squeletton }
+   A dependent type is a type that depends on a value.
+   It is very flexible to use, as to refine the type of a function without
+   including the whole specification.
+   A very simple example is to define a predecessor with only the rule for
+   case 0:
+
+   $${\tt \forall ~n:~nat,~n~>~0~\rightarrow ~nat}$$
+
+\item Coq also includes inductive types, as explained in the next subsection.
+\end{itemize}
+
+A proof term of type
+$\forall~n:~nat,~P\, n~\rightarrow Q\, n$ is $fun~(n:nat),~P~n~\rightarrow ~Q~n$
+is a function which takes a natural number $n$ and a proof of $P~n$ as arguments
+and returns $Q~n$.
+In general, proofs are functions and checking the correctness of a proof
+boils down to type-checking.
+% \jf{Explain that proofs are functions. E.g., a proof of
+%  $\forall n:nat, P\, n \rightarrow Q\, n $ is a function
+% which takes as arguments a natural number $n$,
+% a proof of $P \,n$ and returns a proof of $Q\,n$.}
+
+Coq is not an automated theorem prover:
+the logic supported by Coq (CiC\footnote{%
+Calculus of Inductive Constructions.}%
+) includes arithmetic;
+therefore it is too rich to be decidable.
+However, type-checking (in particular, checking the correctness of a proof) is decidable.
+As full automation is not possible for finding proofs, human interaction is essential.
+The latter is realized by \emph{scripts},
+which are sequences of commands for building a proof step by step.
+Coq also provides
+built-in tactics implementing various decision procedures
+for suitable fragments of CiC
+and a language called \texttt{Ltac} which can be used for
+automating the search of proofs and shortening scripts.
+
+%\jf{Which can be used for subgoals which are in a decidable fragment of CiC.}
+% \jf{Give examples} % Well, no need because you don't use this feature
+
+\subsection{Inductive definitions}
+
+\newcommand{\toylvar}[1]{\texttt{#1}}
+
+To make a better illustration, we use the same toy language \toyl~\ref{fig:syn}
+as in the previous section.
+Here we show how to inductively define its syntax and its big-step
+operational semantics:
+
+\begin{alltt}
+Inductive tm : Type :=
+  | C : nat -> tm      (* constant *)
+  | V : tm             (* the unique variable *)
+  | P : tm -> tm -> tm (* plus *)
+  | A : tm -> tm       (* assignment *)
+\end{alltt}
+
+%\renewcommand{\coqdocvar}[1]{\texttt{#1}}
+%
+An inductive definition can handle recursive specifications of types;
+it defines how it is constructed.
+The type \toylvar{tm} is the type of
+the toy language \toyl which can be
+a constant (constructor \toylvar{C} associated with a natural number of type
+\toylvar{nat}), a (unique) variable (constructor \toylvar{V}),
+or one of the following two operations: plus
+(two expressions of type \toylvar{tm} connected by the constructor \toylvar{P})
+or assignment
+(constructor \toylvar{A} with an expression of type \toylvar{tm} as input)
+
+Then the inductive definition below gives the annotated inductive type
+to describe the deterministic evaluation relation of the corresponding \toyl in
+big-step style.
+The type of the evaluation \toylvar{eval} is a relation, describing the
+transition from
+an input expression \toylvar{tm} and a state
+to a new state and an evaluation result of type \toylvar{nat},
+a natural number.
+Each clause is defined according to a rule in Figure~\ref{fig:bssem}.
+
+\begin{alltt}
+Inductive eval : state -> tm -> state -> nat -> Prop :=
+  | E_Const : forall s n,
+      eval s (C n) s n
+  | E_Var : forall s,
+      eval s V s s
+  | E_Plus : forall s t1 n1 s' t2 n2 s'',
+      eval s t1 s' n1 ->
+      eval s' t2 s'' n2 ->
+      eval s (P t1 t2) s'' (n1 + n2)
+  | E_Assign : forall s s' s'' t n1 n2,
+      eval s t s' n1 ->
+      eval n1 V s'' n2 ->
+      eval s (A t) s'' n2.
+\end{alltt}
+
+%\begin{alltt}
+%Inductive eval : state -> tm -> state -> nat -> Prop :=
+%  | E_Const : forall s n,
+%      eval s (C n) s n
+%  | E_Var : forall s,
+%      eval s V s s
+%  | E_Plus : forall s t1 n1 s' t2 n2 s'',
+%      eval s t1 s' n1 ->
+%      eval s' t2 s'' n2 ->
+%      eval s (P t1 t2) s'' (n1 + n2)
+%  | E_Assign : forall s s' t n,
+%      eval s t s' n ->
+%      eval s (A t) n n
+%\end{alltt}
+
+\subsection{Proofs and tactics}
+
+In order to show a concrete
+proof using Coq proof assistant, we recall Lemma~\ref{lem:dettoyl}
+which claims the big-step operational semantics of \toyl is deterministic.
+we first formalize the corresponding statement as follows:
+%assertion named \coqdocvar{aevalR\_deterministic}:
+
+\begin{alltt}
+Lemma eval_deterministic:
+  forall st t st' st'' v v',
+  eval st t st' v ->
+  eval st t st'' v' ->
+  (v = v') \(\wedge\) (st' = st'').
+\end{alltt}
+
+It states that,
+with the same initial state \toylvar{st} and expression \toylvar{t},
+evaluating the big-step semantics defined in Figure~\ref{fig:bssem}
+will return the same results and the same new states.
+Then we use Coq in an interactive way to verify this statement.
+The general idea is to make an induction on \toylvar{eval st t st' v},
+name as hypothesis \toylvar{ev1}.
+According to the rules in the inductive definition of \toylvar{eval},
+there are four cases to consider. Under each case of \toylvar{ev1},
+we also have to consider the corresponding derivation of hypothesis \toylvar{ev2}
+of type \toylvar{eval st t st'' v'}.
+The proof script contains a sequence of tactics to lead Coq to
+perform all these steps,
+checking the correctness of the claims we made.
+Here is a short explanation on some basic and frequently used tactics:
+\begin{itemize}
+\item
+  \coqdockw{intros} moves the quantifiers
+  and hypotheses from the goal to the context of assumptions.
+\item
+  \coqdockw{induction} does case analysis for inductively defined types.
+  Induction hypotheses are automatically put into context.
+\item
+  \coqdockw{inversion} derives the constraints on variables according to the inductive
+  definition corresponding to the hypothesis that is inverted.
+\item
+  \coqdockw{reflexivity} checks that the left-hand side and the right-hand side of
+  an equational goal are convertible.
+\item
+  \coqdockw{rewrite} performs replacement according to an equational hypothesis.
+\end{itemize}
+
+The following code from \coqdockw{Proof} to \coqdockw{Qed}
+provides a formal proof of the determinism of big-step semantics of \toyl stated above.
+\begin{alltt}
+Proof.
+  intros until v'; intros ev1 ev2.
+  generalize dependent v'.
+  generalize dependent st''.
+  induction ev1.
+    (*Case "C"*)
+    intros;
+    inversion ev2; subst; split; try reflexivity.
+    (*Case "V"*)
+    intros;
+    inversion ev2; subst; split; try reflexivity.
+    (*Case "P"*)
+    intros;
+    inversion ev2; subst; split;
+    apply IHev1_1 in H2; destruct H2 as [Heqn1 Heqst1];
+    rewrite Heqst1 in IHev1_2;
+    apply IHev1_2 in H5; destruct H5 as [Heqn2 Heqst2];
+    [rewrite Heqn1; rewrite Heqn2; reflexivity | exact Heqst2].
+    (*Case "A"*)
+    intros;
+    inversion ev2; subst;
+    apply IHev1 in H1;
+    destruct H1; rewrite H; split; reflexivity.
+Qed.
+\end{alltt}
+
+\subsection{Interactive proof assistant vs automated theorem prover}
+
+An interactive proof assistant, such as Coq, requires man-machine
+collaboration to develop a formal proof.
+Human input is needed to create appropriate auxiliary defintions,
+choose the right inductive property and, more generally,
+to define the architecture of the proof.
+Automation is used for non-creative proof steps
+and checking the correcntess of the resulting formal proof.
+A rich logic can be handled in an interactive proof assistant
+for a variety of problems.
+
+On the other hand, fully automated theorem provers were developed.
+They can perform the proof tasks automatically, that is,
+without additional human input.
+%then less human work is required to write interactive proving tactics.
+%It is sure that the
+Automated theorem prover can be efficient in some cases.
+But problems appear to be inevitable:
+% JF: the real argument is below, this one looks strange.
+% except first-order logic other logic such as
+% higher-order logic, theorem proving for them is not well implemented.
+%There also exists  the decidability problem in automate theorem prover.
+if we are able to automatically prove a formula,
+it means that it belongs to a decidable (or at least semi-decidable) class of problems.
+%The underlying logics need to be decidable.
+It is well-known that decidable logics are much less powerful, expressive
+and convenient than higher-order logic.
+Then the range of problems we can model with an automated theorem prover is smaller
+than with an interactive proof assistant.
+In practice, both approaches are important
+in the fields of computer science and mathematical logic.
+Here in our project, a rich logical system is needed,
+in order to manage the complexity of the specification and of the proofs.
+% JF: not relevant here.
+% We choose to use the interactive proof assistant Coq.
+% More comparisons of different technologies are in Section~\ref{sec:cersimsoc}.
+
+\subsection{Applications}
+
+Georges Gonthier (of Microsoft Research, in Cambridge, England) and
+Benjamin Werner (of INRIA) used Coq to create a surveyable proof of
+the four color theorem, which was completed in September, 2004~\cite{gonthier2008formal}
+Based on this work, a significant extension to Coq was developed,
+which is called Ssreflect (which stands for ``small scale reflection''). Despite
+the name, most of the new features added to Coq by Ssreflect are
+general purpose features, which is useful not merely for the computational
+reflection style of proof.
+
+The same technology was then used for the formal verification
+of an important result from finite group theory, the ``odd theorem''.
+A simplified proof has been published in two books: (Bender \&
+Glauberman 1995), which covers everything except the character theory,
+and (Peterfalvi 2000, part I) which covers the character theory. This
+revised proof is still very hard, and is longer than the original
+proof, but is written in a more leisurely style.  A fully formal
+proof, checked with the Coq proof assistant, was announced in
+September, 2012 by Georges Gonthier and fellow researchers at Microsoft
+Research and INRIA.\cite{gonthier2013engineering}
+
+\compcert\cite{ccc} is a formally verified optimizing compiler for a subset of
+the C programming language which currently targets PowerPC, ARM and
+32-bit x86 architectures.
+% This project, led by Xavier Leroy,
+% started officially in 2005, funded by the French institutes ANR and
+% INRIA.
+The compiler is specified, programmed, and proved in Coq. It
+aims to be used for programming embedded systems requiring
+reliability. The performance of its generated code is often close to
+that of gcc (version 3) at optimization level O1, and is always better
+than that of gcc without optimizations.
+
+\section{CompCert}
+\label{sec:compcert}
+
+In a previous section (Sec~\ref{sec:gi}),
+we mentioned that we use results of the \compcert project in order
+to link the formal representation of ARMv6 architecture with the C representation
+of this architecture in \simlight.
+Now we introduce \compcert in more detail.
+\compcert is a verified compiler for the C programming language provided by INRIA
+\cite{ccc}.
+It has a long translation chain of eleven steps, from C source code into assembly
+code. Every internal representation has its own syntax and semantics defined in
+Coq. % done by \compcert group.
+It is formally verified in the following sense:
+the produced assembly code is proved to behave exactly the same as the input C program,
+according to a formally defined operational semantics of these languages.
+
+The 2 first languages considered in the \compcert translation chain,
+\compcert C and \clight, are actually subsets of the C language.
+Like C, \compcert C is non-deterministic: for some expressions cause side-effect
+and have more than one evaluation order.
+On the other hand, all expressions of \clight are pure.
+Assignments and function calls in \clight are treated not as statements but as expressions.
+The reason why we choose \compcert C rather than \clight to represent \simlight
+is that
+% it is the closest representation to C language comparing to the next languages,
+% such as \clight, which is also a subset of C and a simplified version of \Compcert C.
+it is much more user-friendly and convenient.
+% \margjf{1}{Don't agree, see next comment}%
+% In order to take every possible execution state into account and the
+% compatibility with \simlight (the c code will be implemented in the \simlight
+% simulator), \compcert C is used instead of \clight.
+% If we take \clight to be the language representing \simlight, the code to be
+% considered is much less readable and less convenient to generate (refer to
+% the translation of our own, not to use \compcert compiler).
+Indeed, as \clight expressions are pure and deterministic,
+a number of auxiliary variables have to be introduced in order
+to manage intermediate states.
+
+Here we present a small example of a C program to illustrate the last point.
+The original C code is as:
+% \begin{alltt}
+% void main(int a, int b, int c)
+% {
+%   a = f(a + b, b + 1, c);
+%   b = f(a, b, c);
+%   c = b;
+% }
+% \end{alltt}
+\begin{alltt}
+void main(int x, int y)
+\{
+  int a;
+  int b;
+  int v;
+  a = f(f1(v, f2(x, y)), f3(a, 1), f4(b, 3));
+\}
+\end{alltt}
+All the function calls (\texttt{fx}) are side-effect free operations.
+Then using \compcert compiler, we are able to generate the \compcert C
+and \clight representations.
+The \compcert representation is exactly the same as the original C
+code in this case. But the \clight representation is quite different,
+with the introduction of additional temporary variables
+(which are different from local variables, they do not reside in memory).
+% \begin{alltt}
+% void main(int a, int b, int c)
+% \{
+%   register int $2;
+%   register int $1;
+%   $1 = f(a + b, b + 1, c);
+%   a = $1;
+%   $2 = f(a, b, c);
+%   b = $2;
+%   c = b;
+% \}
+% \end{alltt}
+\begin{alltt}
+void main(int x, int y)
+\{
+  int a;
+  int b;
+  int v;
+  register int $5;
+  register int $4;
+  register int $3;
+  register int $2;
+  register int $1;
+  $1 = f2(x, y);
+  $2 = f1(v, $1);
+  $3 = f3(a, 1);
+  $4 = f4(b, 3);
+  $5 = f($2, $3, $4);
+  a = $5;
+\}
+\end{alltt}
+%$
+The proof based on these two representations can be expected to
+have the same complexity, because the complexity of the proof
+work is caused by the C memory model. Using either of them will face
+the same memory model (this will be detailed in
+Chapter~\ref{cpt:correct}).
+The transition corresponding to the evaluation of a given high-level
+expression (as the one given above) will anyway be decomposed in smaller
+transitions,
+either if we use the more complicated semantics of \compcert C
+on the original shorter expression,
+or if we use the simpler semantics of \clight
+on the corresponding longer \clight expression.
+Therefore, we don't expect a real gain in using \clight rather than \compcert C
+at the proof stage,
+while we would lose readability and convenience in the C code.
+
+% \jf{Disagree because we consider only one execution anyway.
+% The point is more that if \clight is the target, the code to be
+% considered is much less readable un less convenient to generate.
+% Indeed, as \clight expressions are pure and deterministic,
+% a number of auxiliary variables have to be introduced in order
+% to manage intermediate states.
+% [Here you should add a simple example.]
+% About the work required in proofs, we can expect a similar complexity.
+% The transition corresponding to the evaluation of a given high-level
+% expression (as the one given above) will anyway be decomposed in smaller
+% transitions,
+% either if we use the more complicated semantics of \compcert-C
+% on the original shorter expression,
+% or if we use the simpler semantics of \clight
+% on the corresponding longer \clight expression.
+% Therefore, we don't expect a real gain in using \clight rather than \compcert-C
+% at the proof stage,
+% while we would lose readability and convenience in the C code.
+% }
+
+In \simsoccert, we use two parts of \compcert C.
+The first is the \compcert basic library. It defines data types for words, half-words,
+bytes etc., and bitwise operations and lemmas to describe their properties.
+In our Coq model, we also use these low level representations
+and operations to describe the ISS (Instruction Set Simulator) model.
+The second is the \compcert C language (its syntax and semantics),
+from which we get a formal model of \simlight.
+In our correctness proofs, wa can then analyze its behaviour step by step
+and compare it with our Coq model of ARM.
+
+% Because these independency from \compcert project, we have to update our project
+% due to the version changes in \compcert. Reporting the changes from \compcert
+% version 1.9 to the latest 1.11, there are three big parts we have to mention:
+% \begin{itemize}
+% \item
+% The library for float number has been changed entirely. Althought we don't use
+% float number in \simsoccert, the basic inductively defined type \coqdocvar{type}
+% has one constructor \coqdocvar{Tfloat} which has parameter of type
+% \coqdocvar{float}. Then the compilation option has to include this library path,
+% and it has also to be added in the Coq \coqdockw{loadpath}.
+% \item
+% The type of memory model is
+% \end{itemize}
+
+\subsection{CompCert library}
+\label{ssec:cclib}
+%\newcommand{\int}{}
+
+In \compcert, a reusable basic library
+on machine integers (type \texttt{int}) and bitwise operations
+is formally defined in Coq.
+The type \texttt{int} is based on type \texttt{Z} from the Coq standard library, with
+a proof to guarantee that the range of the value is between 0 and the modulus.
+Parameterized by \texttt{wordsize} of type \texttt{nat} (natural number),
+the integer module can be instantiated to \texttt{byte}, \texttt{int64}, and so on.
+This module also supports the conversion between the types \texttt{int}, \texttt{Z},
+and \texttt{nat}.
+
+Applicative finite maps are the main data structure used in
+the memory state and the global/local environment descriptions.
+There are two basic types, a \texttt{Tree} and a \texttt{Map},
+from which a number of maps and trees can be derived.
+The difference between the two is:
+for \texttt{Tree} the result of the $\langle get\rangle$ operation is an option type:
+if there is no data associated with the key, \texttt{None} is returned.
+For type \texttt{Map}, $\langle get\rangle$ always returns a data.
+If there is no data associated, a default value will be returned, which is
+given at initialization time.
+These two data structures are based on the abstract signature radix-2 search tree.
+And the derived trees and maps are named by their keys which can be integer or positive.
+The \texttt{Tree} is used to define the global and the local environments,
+which gather memory information,
+and map the reference identifier to data information.
+Since the environment corresponds to a memory contents,
+no information can be obtained if a nonexistent address is given.
+On the contrary, the memory contents is represented
+by a \texttt{Map} indexed by an integer.
+If a block in memory has not been allocated,
+it should return a default value \texttt{Undefined} by any visit.
+
+%Applicative finite maps are the main data structure used in this
+%  project.  A finite map associates data to keys.  The two main operations
+%  are [set k d m], which returns a map identical to [m] except that [d]
+%  is associated to [k], and [get k m] which returns the data associated
+%  to key [k] in map [m].  In this library, we distinguish two kinds of maps:
+%- Trees: the [get] operation returns an option type, either [None]
+%  if no data is associated to the key, or [Some d] otherwise.
+%- Maps: the [get] operation always returns a data.  If no data was explicitly
+%  associated with the key, a default data provided at map initialisation time
+%  is returned.
+%
+%  In this library, we provide efficient implementations of trees and
+%  maps whose keys range over the type [positive] of binary positive
+%  integers or any type that can be injected into [positive].  The
+%  implementation is based on radix-2 search trees (uncompressed
+%  Patricia trees) and guarantees logarithmic-time operations.  An
+%  inefficient implementation of maps as functions is also provided.
+
+
+
+\subsection{CompCert C semantics}
+
+\label{ssec:ccc}
+
+% \jf{Explain later in this subsection (at the end?)
+% what is the impact of these restrictions on \simlight:
+% unavailable features can be (and are) completely avoided?
+% If some of them are used: which ones?
+% how is it managed in proofs?
+% If some answers are too much detailed here, or need
+% maaterial to be introduced later,
+% just mention the point and refer to the place
+% where it will be dealt with}.
+
+\compcert C is a large subset of C language.
+Here are some limitations in this subset.
+\begin{itemize}
+\item Types: most of the types in C90 \cite{C90} are supported,
+  except the following points.
+  \begin{enumerate}
+  \item Unprototyped function type $(int f())$
+    and function type with variable number of arguments $(int f(...))$.
+    But it is possible to declare (not define) an external function of
+    the latter.
+  \item A structure can not have an unknown sized array type as the last
+    element. The size information must be known.
+  \end{enumerate}
+\item Wide char and wide string.
+\item Type cast does not support pointer to float.
+%\item The in-memory representation of pointer is opaque, can only be examined by
+%  a 32bits word.
+\item Specify bit fields in unions are not supported.
+%\item In-line assembly code is not supported.
+\item For the switch statement, \texttt{case} and \texttt{default} must appear.
+  And the \texttt{default} must occur at last.
+\item The only available external functions are \texttt{printf}, \texttt{malloc}, \texttt{free},
+  \texttt{\_\_builtin\_annot} and \texttt{\_\_bultin\_annot\_val}. The other external functions can be
+declared but not implemented. One external function will generate an event trace.
+It says the result of the external function is computed by operating system,
+not the \compcert C code.
+\item Every program must have a \texttt{main} function declared.
+\end{itemize}
+
+
+%%% BEGIN moved to Chapter 6
+% % XM
+% % When we want to obtain the \compcert C representation of ARMv6 model,
+% % there are two ways. First, use the \compcert C provided converter to generate \compcert
+% % C code from \simlight C file, which is not a verified translation step in \compcert.
+% % JF -> XM : warning, what you wrote was misunderstood
+% % JF
+% The \compcert C representation of ARMv6 can be presented in two ways:
+% in textual form or using an AST (Abstract Syntax Tree).
+
+% Two options can then be considered.
+% The first is to use the converter provided by \compcert C to generate \compcert
+% C code from \simlight C file, which is not a verified translation step in \compcert.
+% Or, we translate from the ARM internal representation
+% AST to \compcert C AST.
+% If we use the first method, the unsupported things above
+% will not be controlled. The generated code may lose information without warning.
+% So the second transformation is in use.
+% The second transformation also has weakness. The ARM internal AST only contains the
+% ISS model. The function body of library functions is not included,
+% which means the generated code has no definition of these library functions.
+% We have to add them manually, or improve the feature of the transformation by
+% invoking the former.
+% Whichever transformation we choose, we have to give a fake main function.
+% This is because our correctness proof takes each instruction operation as one program.
+% To build a \compcert C program, we must have the main entry point in the global
+% environment.
+%%% END moved to Chapter 6
+
+%JF: I'm HERE
+
+% XM
+% The semantics definition has two aspects.
+% JF
+\compcert provides two operational semantics for \compcert C:
+% XM
+% one is in small-step strategy; the other is in big-step.
+% JF
+one is non-deterministic, in small-step style;
+the other is detailed, in big-step style.
+In our case, the big-step semantics is enough for correctness proofs
+% JF -> XM : the previous sentence is not enough. We already duscussed on that point.
+% Have no time to write smtg here, anyway you should think about it again
+% and maybe add a small paragraph later (before or after submmission).
+% Remove the margf after reading this.
+% Well, look at "important remark" at the end of this file...
+
+% JF: next sentence repeated below
+% The semantics is described as a transition system on the memory model.
+% JF: said earlier -> removed
+% The evaluation Statement and expression is deterministic.
+% Said in 2.1
+% The evaluation is represented using relations for a better proof induction.
+%%Coq had better support for proof induction over relations than over function definitions
+The formal operational semantics is described as a transition system
+on memory states written as follows:
+$$G,E~\vdash ~\langle\textrm{expression}\rangle,~M~\xLongrightarrow{t}~v,~M'.$$
+Here $G$ represents the global environment of the whole program;
+$E$ is the local environment;
+$M$ and $M'$ are memory states and $t$ is a trace of I/O events;
+$v$ is a returned value.
+
+In \compcert C, expressions can be categorized into 15 cases,
+% XM
+% and we have 13 of them that are used in our correctness proofs.
+% JF
+13 of them are used in our correctness proofs.
+Some of them are similar to the ones for \clight and are already listed
+in \compcert papers \cite{lerbla08}.
+Inference rules that are different from \clight are presented
+in Fig.~\ref{fig:evalexpr}.
+\begin{figure}
+\begin{minipage}[b]{1\linewidth}
+\centering
+%\small
+
+%  eval_call: forall e m rf rargs ty t1 m1 rf' t2 m2 rargs' vf vargs
+%                       targs tres fd t3 m3 vres,
+%       eval_expr e m RV rf t1 m1 rf' -> eval_exprlist e m1 rargs t2 m2 rargs' ->
+%       eval_simple_rvalue ge e m2 rf' vf ->
+%       eval_simple_list ge e m2 rargs' targs vargs ->
+%       classify_fun (typeof rf) = fun_case_f targs tres ->
+%       Genv.find_funct ge vf = Some fd ->
+%       type_of_fundef fd = Tfunction targs tres ->
+%       eval_funcall m2 fd vargs t3 m3 vres ->
+%       eval_expr e m RV (Ecall rf rargs ty) (t1**t2**t3) m3 (Eval vres ty)
+\begin{equation}
+\label{eq:funcall}
+\frac
+{\begin{array}{c}
+G,E\vdash rf~M~\xLongrightarrow{t1}~rf',M1\qquad
+G,E\vdash rarg^*~M1~\xLongrightarrow{t2}~rarg'^*,M2\\
+G,E\vdash M2~rf' \Rightarrow vf\qquad
+\texttt{find\_funct}~(G,vf)~=~\lfloor fd\rfloor\\
+\vdash M2~fd~varg^* \xLongrightarrow{t3}vres,M3
+\end{array}
+}
+{G,E\vdash M~\langle\textrm{\texttt{Call}}\rangle\xLongrightarrow{t1**t2**t3}vres,M3}
+\end{equation}
+\end{minipage}
+
+\begin{minipage}[b]{1\linewidth}
+\centering
+   % eval_assign: forall e m l r ty t1 m1 l' t2 m2 r' b ofs v v' t3 m3,
+   %    eval_expr e m LV l t1 m1 l' -> eval_expr e m1 RV r t2 m2 r' ->
+   %    eval_simple_lvalue ge e m2 l' b ofs ->
+   %    eval_simple_rvalue ge e m2 r' v ->
+   %    sem_cast v (typeof r) (typeof l) = Some v' ->
+   %    assign_loc ge (typeof l) m2 b ofs v' t3 m3 ->
+   %    ty = typeof l ->
+   %    eval_expr e m RV (Eassign l r ty) (t1**t2**t3) m3 (Eval v' ty)
+\begin{equation}
+\frac
+{\begin{array}{c}
+G,E\vdash l~M\xLongrightarrow{t1}l',M1\qquad
+G,E\vdash r~M1\xLongrightarrow{t2}r',M2\\
+G,E\vdash l'~M2\Rightarrow (b, ofs)\qquad
+G,E\vdash r'~M2\Rightarrow v\\
+cast(v,typeof(l),typeof(r))=~\lfloor v'\rfloor\\
+store (G,~typeof(l),~M2,~(b,ofs),~v)=~\lfloor M3\rfloor\\
+\end{array}
+}
+{G,E\vdash (l=r)~M\xLongrightarrow{t1**t2**t3}v',M3}
+\end{equation}
+\end{minipage}
+\caption{Some rules for \compcert C operational semantics}
+\label{fig:evalexpr}
+\end{figure}
+
+The first rule in Fig~\ref{fig:evalexpr} is for evaluating a function call.
+The evaluation is quite different from the rule for \clight.
+Not only that \clight expressions are side-effect free,
+but \compcert C separates memory state
+transformation from evaluating simple expressions in order to preserve memory
+state.
+A function call can be evaluated in three steps:
+evaluating the function referenced by identifier \texttt{rf} to get where it
+is stored;
+evaluating the function arguments \texttt{rargs} to get their values;
+finding the function definition \texttt{fd} in the environment;
+then evaluating the function call using \texttt{eval\_funcall}.
+
+The second rule in Fig~\ref{fig:evalexpr} is the evaluation of an assignment.
+In \clight, an assignment is not an expression but a statement
+because \clight expressions are pure.
+
+In \simlight, the interpretation uses a subset of C features
+which is as simple as possible.
+% JF -> XM: important remark
+This is not only to satisfy to \compcert C restrictions,
+but also to avoid ambiguous situations where an expression could
+have different behaviours.
+This way, the bigstep semantics of \compcert C is sufficient.
+% JF -> XM 2 vrbs in the next sentence, -> cannot understand
+% in order to preserve most of the C representations
+% would be used to perform proofs.
+% XM
+% As the \compcert C restrictions being introduced in the beginning of this section,
+% there are still some of them can not be avoided in \simlight.
+% JF
+However, some features outside of \compcert C
+occur in the current version of \simlight:
+external functions, which are used in many places
+to perform I/O subsystem communications.
+Currently, those external functions are represented by axioms.
+As a future improvement,
+it will be better to use internal functions instead.
+
+% JF: next parag a bit low-level, and not really related to background
+% Each instruction is included in one file
+% in order to perform correctness proofs individually.
+% These files contains no \texttt{main} declaration.
+% During translation, we add automatically a empty \texttt{main} in every file.
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "thesis"
+%%% End:

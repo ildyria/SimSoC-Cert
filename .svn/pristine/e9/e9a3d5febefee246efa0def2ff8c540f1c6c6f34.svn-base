@@ -1,0 +1,84 @@
+
+Full automation is impossible ==> need a good name management,
+  impossible with standard inversion 
+
+--> intro JF
+--> sect 4  XM
+
+NOT a small extension of Coq-wkshop JF
+
+Hunting technicalities of Coq JF + XM
+
+Example not handled by Coq that we could ?
+
+More explanations in Sec 4
+- eg. just a few names to be given, impossible with std inversion,
+  possible because we have a full control
+- more arguments on productivity
+  fully robust against changes in naming algos of Coq
+  very robust against changes in Compcert
+
+"Detailed comments" of review 4 : XM (sometimes JF)
+table 1 names : XM
+
+compare Agda's destruct : JF ?
+compare McBride : JF
+compare Wilmer Ricciotti : JF
+
+Less details on Simsoc : not urgent
+
+Detailed comments of reviewer 4
+(not to be confused with typos and grammar of the same reviewer):
+started by JF, 3 or 4 remaining for section 4 --> XM
+
+
+Hello,
+> 
+> Another argument to point: with your implementation of handcrafted
+> inversion, it seems that the ad-hoc tactics requires much less names
+> than standard inversion (in the form: inversion hyp as [ H1 H2 H32 | etc. ]).
+> I saw that in your scripts when preparing the talk at Orsay, and
+> claimed that this is one of the points which makes an important difference 
+> for helping maintenance (and writing) scripts.> 
+> Can you confirm and better, explain why?
+
+Using the ad-hoc tactics requires no name to give to variables or
+hypotheses.The names are given during defining the general
+hc_inversion, according to the meaning of the hypo orwhatever names
+you can recognise later.For example, hypo "find_funct ...." is named
+"Hfindfunc".When maintaining the scripts, we know which hypo it refers
+to.It is done once for all. Unlike using build-in inversion, you don't
+need to look at the big inductive definition forthe long list of
+variables and permises every time you apply inversion.I don't know if
+it answer your question.
+
+And from reading the previous comments. I think the first three
+sections are less questioned.Most of the problems are facing the step
+to applying it to big project and the experiment result comparison.And
+the issue we met in simsoc-cert need to be explained more and
+carefully, like naming.We can give some scripts and the generated
+proof terms to show the problem more clearly maybe.And I remember, we
+did some comparison on timing and compilation results of
+derive_inversion, inversion and hc_inversion.We can have them as one
+of the good argument.
+
+> 
+> Today I still work for ANR-NSFC submission.
+> Tomorrow I'll come to Tsinghua and sign something for He Fei.
+> Meanwhile, can you:
+> - read carefull the previous submission
+> - analyse comments
+> - prepare suggestions for the new submission, such as
+>   - remove paragraphs
+>   - add paragraphs/sections on something
+>   - reorder
+>   - whatever
+> In each case explain why, think about pros and cons, etc.
+> so that our discussion will be much more efficient, and then
+> we can plan what we will do.
+> 
+> Thanks and happy working, see you tomorrow :)
+> JF
+> 
+> 
+ 		 	   		  

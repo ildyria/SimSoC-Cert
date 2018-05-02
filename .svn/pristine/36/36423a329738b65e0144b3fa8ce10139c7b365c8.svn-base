@@ -1,0 +1,250 @@
+\section{Current Proofs}
+\label{sec:results}
+\newcommand{\ofs}{\ensuremath{\mathit{ofs}}}
+
+On both sides, the Compcert-C \simlight model and the Coq ARM model, 
+the state of the processor is expressed by a big Coq term.
+%The behavior of the ARM system is defined by the possible state changes.
+In the Compcert-C \simlight model, the processor state information is gathered in
+a data structure \texttt{SLv6\_Processor}, 
+which includes the MMU, 
+the status registers \texttt{CPSR} and \texttt{SPSR}, the
+system coprocessor and the registers.
+In the Coq formal model of ARM, the processor state is represented
+by a value of type 
+\texttt{result}, described in Section~\ref{s:sem-ARM}.
+
+It is clearly possible to define a projection from
+% the Compcert-C representation of 
+a \texttt{SLv6\_Processor} $M$
+to a \texttt{result} $r$.
+Then we say that $M$ and $r$ are \emph{projective-related},
+denoted by $\mathit{proc\_state\_related}\;M\;r$.
+The evil is in the details of the different type definitions,
+especially for the memory models.
+Here are the guiding ideas.
+%
+Once a function such as \texttt{ADC\_Coq\_simlight} is called, 
+parameters are allocated in memory, and a local environment is built. 
+This local environment contains the mapping
+from identifiers to a memory block reference.
+For a variable of type \texttt{struct}, such as the ARM processor, 
+the environment only yields an entry pointer to the structure.
+Here, the type information generated for our Compcert-C AST
+is needed in order to find fields inside Compcert-C memory,
+and to retrieve the processor model.
+The main function used there from Compcert is \verb|load|. 
+Its arguments are a memory $M$, a block $b$, 
+an offset $\ofs$ and the type $\tau$ of the value to be loaded
+from $b$ at $\ofs$. 
+% It returns an optional value, e.g.,
+% $$\texttt{load}(\tau,M,b,\ofs) = Some\: v$$
+Other variables who have a simple type like \texttt{int32},
+are directly accessed by their identifier from the environment.
+
+% The main part of the ARM architecture is the processor and its instruction set.
+% If we can provide a set of instructions which operates correctly,
+% simulator users will perform applications on top of these instructions safely.
+% Here is the theorem we want to reason about, in the first place:
+% we have the projective relating processor states in C and Coq,  
+% after executing the same instruction \texttt{ADC}, the relation still holds for the 
+% two new processor states.
+
+Let us now consider a specific instance of Fig.~\ref{fig:thrm},
+applied to \texttt{ADC}.
+We choose it first because it is a typical ARM operation, 
+which involves various ways of changing the processor state,
+and arithmetic calculations.
+Moreover, all data-processing operations have a very similar structure. 
+If we prove the correctness of the \simlight implementation of \texttt{ADC}, 
+we can expect to automate the proofs for the others data-processing operations.
+
+The proof exploits the formal operational semantics of Compcert-C,
+which is defined as a transition system
+$$G,E\vdash \langle\textrm{piece of code}\rangle,M\overset{t}{\Rightarrow}out,M'$$
+where $G$ represents the global environment (constants) of the program,
+$E$ represents the local environment,
+$M$ and $M'$ represent memory states,
+$t$ is the trace of input/output events
+and $out$ is the outcome.
+In our case, the piece of code is \texttt{ADC\_Coq\_simlight},
+and the trace of input/output event ($t$) is empty:
+all function calls are internal calls.
+Compcert-C offers two kinds of operational semantics:
+small-step and big-step semantics.
+The latter is better suited to our needs because 
+the statement of correctness, along the diagram in Fig.~\ref{fig:thrm},
+relates states before and after the execution of the body of an operation.
+The precise statement of our theorem is as follows.
+\begin{theorem}\label{t:adc}
+Let $M$ and $M'$ be the memory contents respectively before and
+after the simulation of \texttt{ADC\_Coq\_simlight};
+similarly, let $st$ and $st'$ be the state of ARM in its formal model.
+If $M$ and $st$ are projective-related,
+as well as the arguments of the call to \texttt{ADC},
+then $M'$ and $st'$ are projective-related as well.
+Formally, if:
+\begin{itemize}
+\item $\mathit{proc\_state\_related} \: M \: (\texttt{Ok}\: st)$
+\item similarly for the arguments of \texttt{ADC}
+\item 
+  $G,E\vdash \texttt{ADC\_Coq\_simlight},M\overset{t}{\Rightarrow}out,M'$
+  %$exec\_stmt \: (globalenv\:(\texttt{ADC\_prog}),\:e,\:M,\:\texttt{ADC\_body},\:E0)=(M',\:out)$
+% \item 
+%   $\texttt{ADC\_Coq}\: (...(*\:other\:params\:*),\:st) = \texttt{Ok}\: st'$
+\end{itemize}
+then $\mathit{proc\_state\_related}\: M' \:(\texttt{ADC\_Coq}\: (\mathit{arguments},\:st))$.
+\end{theorem}
+
+% Because in ADC function body, there is no loop or switch statement, 
+% we can follow the natural semantics for Compcert-C statement.
+% $$\frac{G,E\vdash s_1,M\overset{t_1}{\impl}Normal,M_1
+% ~~~G,E\vdash s_2,M_1\overset{t_2}{\impl}out,M_2}
+% {G,E\vdash (s_1;s_2),M\overset{t_1;t_2}{\impl} out,M_2}$$
+In the Coq formal model of ARM, transitions are terminating functions
+returning a result of type \texttt{result}, 
+as defined in section~\ref{sec:armmodel}.
+
+The proof process is driven by the structure of the operation body. 
+Step by step, we observe the memory changes on the Compcert-C side 
+and the state changes on the Coq side, 
+and we check whether the relation still holds between 
+the current Compcert-C memory state and the Coq state.
+%
+To this effect, 
+we apply theorems on load/store functions from Compcert~\cite{lerbla08}.
+Proof by computation does not work because the types involved
+are complex -- they embed logical information --
+and many definitions are opaque.
+
+In \texttt{ADC\_Coq}, conditional expressions and function calls for getting values 
+have no side effect on the state.
+On the Compcert-C side, declaring a local variable in a function has no impact on
+the memory model of the processor. 
+%
+The state may only change when a function for setting values is called, 
+like \texttt{set\_reg}, \texttt{copy\_StatusRegister}, 
+or assignment of bits in register fields. 
+Such calls will return a new memory state on the Compcert-C side
+and a new \texttt{Ok} state on the Coq side.
+We use small-step semantics for such steps.
+
+Now we need some lemmas for these proof steps. 
+Lemmas can be organized into four kinds.
+We give an instance of each kind.
+
+\begin{lemma}\label{l:1}
+The conditional expression \texttt{S==1} has no effect on Compcert-C memory state:\\
+if $G,E\vdash \texttt{condition}_C ? a1 : a2, M\overset{E0}{\Rightarrow}vres,M'$,\\
+%$\texttt{eval\_expression}\:(globalenv\:(\texttt{ADC\_prog}),\:e,\:M,\:cond_C,\:E0)=(M',\:vres),$\\
+then M=M'.
+\end{lemma}
+Lemma \ref{l:1} is easy to prove by some inversions. % on \texttt{eval\_expression}.
+All lemmas of this kind have been discharged.
+
+
+\begin{lemma}\label{l:2}
+The conditional expression \texttt{S==1} 
+has the same result in the Compcert C % cheating for space
+model as in the Coq model:\\
+if $G,E\vdash \texttt{condition}_C ? a1 : a2, M\overset{E0}{\Rightarrow}vres,M'$:\\
+%$\texttt{eval\_expression}\:(globalenv\:(\texttt{ADC\_prog}),\:e,\:M,\:condition_C,\:E0)=(M',\:vres)$,
+- and if $is\_true~vres$, then $condition_{Coq} = true$\\
+- and if $is\_false~vres$, then $condition_{Coq} = false$.
+\end{lemma}
+To prove lemma \ref{l:2}, we need to apply small-step semantics, 
+to check the type of \texttt{S} and 
+the value of the Boolean result \texttt{vres}.
+Note that in Compcert-C, 
+non-zero integer, non-zero floats and non-null pointer can
+be interpreted as the Boolean value true,
+which adds some complexity in the proof.
+
+The proof is by case analysis according to the type of \texttt{vres}.
+As the expression involves a parameter ($S$),
+the projective relation about this parameter
+between Compcert-C memory and the formal model of ARM is required.
+
+All lemmas of this kind have been discharged.
+
+% A lemma of the next kind is stated or each binary operation 
+% called $binop_C$ in the C model and $binop_{Coq}$ in the formal model of ARM.
+% \begin{lemma}
+% If $eval\_expression (globalenv(ADC\_prog),e,M,binop_C,E0)=(M',vres_C)$,\\
+% and if $binop_{Coq} = vres_{Coq}$,
+% then $vres_{C}=vres_{Coq}$
+% \end{lemma}
+% In the proof lemma 3, small-step semantics is used too. It is useful when
+% we want to have the observable result on evaluations. 
+% Here the small-step semantics helps to reduce one redex at a time. 
+% Then to compare the calculate the result of both sides.
+% All lemmas of this kind have discharged.
+% 
+
+\medskip
+A lemma of the two next kinds is stated for each \simlight library function 
+which changes the state,
+e.g., \texttt{set\_reg}.
+\begin{lemma}\label{l:3}
+If $\mathit{proc\_state\_related} \:M~(\texttt{Ok}~st)$,\\ 
+and if
+$G,E\vdash \texttt{set\_reg}_c(proc,reg\_id,data), M\overset{E0}{\Rightarrow}vres,M'$,\\
+%$eval\_expression\:(globalenv\:(\texttt{ADC\_prog}),\:e,\:M,\:\texttt{set\_reg}_C,\:E0)=(M',\:vres)$,\\
+%and $\texttt{set\_reg}_{Coq}~st = st'$, \\
+then $\mathit{proc\_state\_related}~ M'~ (\texttt{set\_reg}_{Coq}~st)$.
+\end{lemma}
+For the moment, such lemmas are considered as axioms on the library.
+In order to be properly stated, 
+we need the Compcert-C ASTs of such library functions,
+which are not automatically generated.
+%
+We have 6 lemmas/axioms of this kind for \texttt{ADC}.
+
+\medskip
+The next lemma is stated for
+a given call to \texttt{set\_reg} in the body of the function 
+\texttt{ADC\_Coq\_simlight}
+and a parameter $P$ of \texttt{ADC\_Coq\_simlight} 
+which is not used as an argument of  \texttt{set\_reg}.
+\begin{lemma}\label{l:4}
+After the call to \texttt{set\_reg},
+the value of $P$ remains unchanged:\\
+if 
+$G,E\vdash \texttt{set\_reg}_c(proc,reg\_id,data), M\overset{E0}{\Rightarrow}vres,M'$,\\
+%$eval\_expression\:(globalenv\:(\texttt{ADC\_prog}),\:e,\:M,\:\texttt{set\_reg}_{C},\:E0)=(M',\:vres)$,\\
+then $P(M)=P(M')$.
+\end{lemma}
+Lemma 4 can be proved with the help of theorems of Compcert 
+on ``load after store''. A typical proof step looks like:
+\begin{quote}
+If we store a value $v$ on block $b$ ($\texttt{store}(M1,\tau,b,\ofs,v)=M2$),
+then 
+the contents of block $b'$ remains unchanged
+($\texttt{load}(\tau',M2,b',\ofs')=\texttt{load}(\tau',M1,b',\ofs')$)
+for any type $\tau'$ and offset $\ofs'$,
+which makes the accesses disjoint
+($b'\neq b$ or $\ofs+|\tau|\leq \ofs'$ or $\ofs'+|\tau'|\leq \ofs$).
+\end{quote}
+As for lemmas \ref{l:3}, we need additional axioms on \simlight library functions.
+
+\medskip
+Our current result is that, with the help of these lemmas, 
+we have a complete correctness proof for \texttt{ADC} (Theorem \ref{t:adc}).
+% Theorem \ref{t:adc} 
+% and all the lemmas are in the file \verb|correctness_ADC.v|$^{\ref{f:site}}$.
+%available at \verb|/simsoc-cert/correctness_ADC|, 
+%they are called in the main theorem, named \verb|related_aft_ADC|.
+
+The whole proof structure of this theorem and 
+all twenty lemmas of kinds \ref{l:1} and \ref{l:2} were completed within 2 weeks.
+The 10 remaining lemmas, of kinds \ref{l:3} and~\ref{l:4}, should require a similar
+effort. 
+Here, we first need to generate Compcert-C ASTs for the 
+relevant library functions using the C parser available in Compcert.
+
+
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "cpp"
+%%% End: 

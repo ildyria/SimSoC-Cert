@@ -1,0 +1,807 @@
+\chapter{Formal model of ARMv6}
+\label{cpt:formal}
+
+% \jf{Short introduction in 2 or 3 sentences}
+In the beginning of this chapter,
+we present a short introduction of the ARMv6 reference manual,
+% XM
+% It helps to understand which parts we have to specify in our model;
+% [The line is right but can only be written by a reviewer!]
+% the quantity and the complexity of the specification work.
+% JF
+with an emphasis on the parts we have to specify in our model.
+Next we present our formal Coq model of ARMv6:
+the main types, how instructions are formalized,
+and the ARM instruction decoder.
+
+\section*{Résumé}
+\selectlanguage{french}
+\begin{resume}
+Ce chapitre commence par une introduction au manuel de référence de l'ARMv6,
+qui sert de point de départ de notre travail.
+Nous insistons plus particulièrement sur les parties que nous avons
+formalisé en Coq.
+Nous présentons ensuite notre modèle formel Coq de l'ARMv6:
+les types principaux permettant de décrire l'état du processeur, 
+la façon dont les instructions sont formalisées,
+et enfin le décodeur.
+Nous terminons par quelques remarques sur nos tentatives d'utilisation
+de ce modèle comme spécification exécutable.
+\end{resume}
+
+\selectlanguage{english}
+
+\section{The ARM reference manual}
+\label{sec:ref}
+% \jf{2-3 pages. The reader should understand the complexity of your work.
+% \\%
+% Ideal situation = they provide a formal model.
+% Not the case.
+% So make one from the ref man.
+% \\%
+% Similarly Compcert designed a formal model of C according
+% to the informal ISO-C standard (check).
+% \\%
+% Explain the structure of ARM ref man.
+% State = registers + memory + ...
+% \\%
+% Library of basic fct
+% \\%
+% 3 addressing modes, 11 operand modes, 15 condition modes, 2 post-operation modes
+% \\%
+% Instructions : encoding, pseudo-code, english
+% \\%
+% $\rightarrow$ Big number of possible instructions
+% }
+
+\newcommand{\state}{\textit{state}\xspace}
+\newcommand{\armst}{\state}
+\newcommand{\bit}[1]{\texttt{#1}\xspace}
+\newcommand{\inst}[1]{\texttt{#1}\xspace}
+\newcommand{\adc}{\inst{ADC}\xspace}
+\newcommand{\armkw}[1]{\texttt{#1}\xspace}
+\newcommand{\unpred}{\armkw{UNPREDICTABLE}\xspace}
+\newcommand{\armvar}[1]{\emph{#1}}
+\newcommand{\armrf}[1]{\texttt{#1}\xspace}
+\newcommand{\coqcode}[1]{\texttt{#1}\xspace}
+In order to certify the ARMv6 simulator, first we need to have a formal
+model that can be referred to.
+% XM
+% We would expect the ARM provider provides a formal model,
+% JF
+In an ideal world, the ARM company would provide a formal model of their processors,
+but it is not the case...
+In fact, the only basis we can depend upon to obtain an ARMv6 formal model
+is their reference manual~\cite{arm6refman}.
+Similarly, \compcert project~\cite{ccc} designed their \compcert C language and Asm language
+according to the informal ISO C 90 standard document~\cite{C90} and relevant parts of
+the reference manuals for PowerPC, ARM, and IA32.
+
+% JF: removed the next sentence which is obvious
+% To understand how to design the formal model of ARMv6, we have to first understand its reference manual.
+The ARMv6 reference manual
+is structured in four main parts, {\bf CPU architecture}, {\bf Memory and system architecture},
+{\bf Vector floating-point architecture} and {\bf Debug architecture}.
+The useful contents for us to build our formal model is taken in the CPU architecture part.
+There is another important section at the end of the document,
+the {\bf Glossary},
+which gives the detailed explanation of key words appearing in the
+document using formulas and English.
+
+The {\bf CPU architecture} part introduces the ARM programmers' model, the ARM instruction set,
+the ARM addressing modes, and the Thumb instruction set.
+The contents of the programmers' model helps to formalize a \armst representing the
+structure of the ARMv6 processor.
+Most of the contents are written in English.
+% JF: removed the next sentence which is obvious
+% Then we need to abstract this \armst by understanding the document.
+The ARM processor state can be illustrated as in Figure~\ref{fig:armst}\,.
+
+\begin{figure}[h]
+\centering
+%$state_{proc}\!=\textit{general-purpose}~registers\times status~registers\times exceptions\times processor~modes$
+$\state_{proc} = \left\{
+  \begin{array}{l}
+    \textit{general-purpose~registers} ~\times\\
+     \textit{status~registers} ~\times\\
+     \textit{exceptions} ~\times\\
+     \textit{processor~modes}
+   \end{array}
+ \right.$
+
+\medskip
+
+$\state_{scc}=\textit{registers}~\times~\textit{memory}$
+
+$\state_{ARMv6}=\state_{proc}~\times~\state_{scc}$
+\caption{ARM processor state}
+\label{fig:armst}
+\end{figure}
+
+\sloppy
+% JF "is contructed by" --> "contains";
+% Rule of thumb: use simple words unless you are really sure of what you write,
+% e.g. you found significant instances on google; is it the case here?
+% Actually "is contructed by" may work but I'm not sure
+% -- and I'm not confident in your English, sorry...
+The ARM main processor contains thirty-one 32-bit general-purpose
+registers including the program counter, and six 32-bit status
+registers.  A particularity of ARM architecture is that the program
+counter, register 15, can be used as any other general-purpose
+registers (e.g one can XOR the program counter with another register...)
+But it has many instruction-specific effects on instruction
+execution.  If the program counter is used in a way that does not obey specified
+restrictions, the instruction will yield to an \unpred state.  When \unpred
+state is reached, the instruction results cannot be relied upon, but the system
+will not halt or raise exception:  \unpred is part
+of the system.
+
+Access to the registers is decided by the current processor mode.  The
+processor mode is encoded in 5 bits of the Current Program Status
+Register (CPSR), which is accessible in all processor modes (user
+mode, FIQ mode, IRQ mode, supervisor mode, abort mode, undefined mode,
+system mode), see Figure~\ref{fig:armpm}.  Other than CPSR, the other
+five status registers are the Saved Program Status Registers (SPSR)
+corresponding to each mode.  When internal or external sources
+generate exceptions, the processor will react as follows.  The
+processor status in CPSR will first be preserved into an SPSR
+according to the type of the exception.  The processor mode is switched
+to the associated exception mode, the bits representing the processor
+mode in CPSR then change to the corresponding exception mode.  Thus
+each type of exception proceeds under the specific exception
+mode. Eventually, the processor will return to the normal user mode
+and the CPSR will be restored from the saved value.
+
+\fussy
+
+\begin{figure}[h]
+\centering
+$$exn\_mode=fiq~|~irq~|~svc~|~abt~|~und$$
+$$proc\_mode=usr~|~exc\_mode~|~sys$$
+\caption{ARM processor modes}
+\label{fig:armpm}
+\end{figure}
+
+In our work, we only consider a simplified memory model without the
+memory management unit (MMU) described in part {\bf Memory and system
+  architecture}, in which only read and write functions are kept.  In
+the ARM model, memory is controlled by the System Control Co-processor
+(CP15). So we describe the memory model as a part of System Control
+Co-processor (SCC), together with registers of SCC.  The state of SCC
+and the state of the main processor are together to form the state of
+ARMv6.
+
+%3 addressing modes, 11 operand modes, 15 condition modes, 2 post-operation modes
+The next part of {\bf CPU architecture} is for the ARM instructions
+set.  This is where we spent most of our efforts.  For ARMv6
+architecture, there are 147 kinds of instructions and five kinds of
+addressing modes; with the different combinations of 15 condition
+modes, 11 operands, and two post-operation modes; the combination of
+which represents tens of thousands of instruction instances to
+consider.
+
+The reference manual describes the ARM instructions in a
+well-structured way by providing their syntax and usage.  Each
+instruction is specified by:
+\begin{itemize}
+\item The instruction encoding table
+\item The instruction syntax
+\item The validation under different versions of ARM architecture
+\item The exceptions that may occur
+\item The pseudo-code explaining the instruction operation
+\item The usage or notes.
+\end{itemize}
+
+The description of instructions plays a very important role in our project.
+%We have to understand each part precisely, in order to formalize them accurately.
+As an example, let us take the instruction \adc from the
+data-processing instruction set.  This instruction performs an add
+with carry.  It adds (with carry) the value of a register with either
+the value of another register or an immediate value.  Its encoding
+table is shown in Figure~\ref{fig:adcet}\,.
+
+
+\begin{figure}[h]
+\centering
+\begin{tabular}{|c|c|c|c|c|c|c|c|c|c|}
+%\multicolumn{10}{c}{\small\em (a) binary encoding of the {\stt ADC} instruction}\\
+\hline
+31 $\ldots$ 28 & 27 26 & 25 & 24 \dotfill 21 & 20 & 19 $\ldots$ 16 & 15 $\ldots$ 12 & \multicolumn{3}{c|}{11 \dotfill 0} \\\hline
+\stt cond & \stt 0~0 & \stt I & \stt 0~1~0~1 & \stt S & \stt Rn & \stt Rd & \multicolumn{3}{c|}{\stt shifter\_operand} \\
+\hline
+\end{tabular}
+\caption{ADC instruction encoding table}
+\label{fig:adcet}
+\end{figure}
+
+The bits $[31:28]$ encode the conditions (\armrf{cond}), under which the instruction is going to be executed.
+$$\begin{array}{rl}
+   \armrf{cond} = & \armrf{EQ~|~NE~|~CS~|~CC~|~MI~|~PL~|~VS~|~VC~|~HI~|~}\\
+                  & \armrf{LS~|~GE~|~LT~|~GT~|~LE~|~AL}
+ \end{array}
+$$
+
+When the condition is not satisfied, the instruction has no effect on
+the processor state, acting like a \textit{No-Op} instruction, and the
+program counter moves up to the next instruction.  Most ARM
+instructions are conditional, only a small number can be executed
+unconditionally, although in practice many instructions bear the
+\textbf{always} code, which indicates that the instruction is always
+executed.  The four bits of the condition code are related to the
+condition flags in the Status Register, so that an instruction can be
+executed only when the condition code matches.
+
+The bits $[24:21]$ form what is called the \armkw{opcode}, which
+specifies the operation. Here it contains the code for ``add with
+carry''.  These bits are first checked by the decoder to recognize the
+instruction kind.
+
+The \bit{I} bit is an identifier which distinguishes the immediate
+shifter operand from the register-based shifter operand, and the
+\bit{S} bit indicates whether the instruction updates the flags in
+CPSR.
+
+\armkw{Rn} is the first source operand. According to the addressing
+mode encoded by bits \bit{I},\bit{7} and \bit{4} (explained below in
+this section), the second operand is one of the following basic cases:
+\begin{itemize}
+\item
+An immediate operand, formed by rotating bits $[7:0]$
+with a even value decided by the four bits $[11:8]$.
+\item
+A register operand, which refers to the bits $[3:0]$.
+\item
+A shifted register operand, which is a shifted or rotated value
+  of a register.  The register is of bits $[3:0]$, and the five types
+  of shift is indicated by the bits $[11:7]$.
+\end{itemize}
+
+However, because the ARM encoding is very dense, the same instruction
+with a special combination of the three bits \bit{I}, \bit{7}, and \bit{4},
+is no longer a data-processing instruction,
+but it becomes an extension of the Load/Store instruction...
+
+In the assembly language description for each instruction,
+parameters wrapped by \armrf{<~>}
+refer to corresponding bit fields in the encoding table.
+For example in Figure~\ref{fig:adcas},
+the value of the parameters in the assembler syntax of \adc,
+\armkw{cond}, \armkw{S}, \armkw{Rd}, \armkw{Rn},
+and \armkw{shifter\_operand} must be encoded precisely by the bit fields
+from the \adc encoding table as Figure~\ref{fig:adcet}.
+% JF: the next unfinished sentence seems to be here by mistake
+% The symbol \armrf{<~>} wraps the value that is
+
+\begin{figure}[h]
+\centering
+$\armrf{ADC\;\{<cond>\}\{S\}~<Rd>,~<Rn>,~<shifter\_operand>}$
+\caption{ADC assembler syntax}
+\label{fig:adcas}
+\end{figure}
+
+The binary decoder in the simulator must extract the bit fields from
+the binary instruction and initialize C variables or data structures
+with the appropriate value of the parameters, which sometimes requires
+an additional operation like sign extension.
+
+The C like code in Figure~\ref{fig:adcpc} is the piece of pseudo-code
+given in the document to describe what the instruction ADC does.  It
+first checks if it is conditionally executed. If not, the execution
+will finish. If so, it assigns the result of adding the contents in
+register \armrf{Rn}, the value of \armrf{shifter\_operand} and the
+carry (\armrf{C} flag in CPSR).  Then, considering whether the
+\armrf{S} bit is set or not, the CPSR is updated or not.  If the
+\armrf{S} bit is set and register \armrf{Rd} is the program counter,
+it means that the ARM processor is currently running under exception
+mode and the status in SPSR needs to be restored in CPSR.  Before
+writing to the CPSR, a check is performed to determine if the current
+mode is an exception mode, because only such a mode possesses an
+SPSR. Otherwise the instruction returns \unpred.  If the register
+\coqdockw{Rn} is some other general-purpose register and the
+\coqdockw{S} bit is set, CPSR has to be updated according to the
+result of the addition and the presence of a carry.
+
+\begin{figure}[h]
+\begin{alltt}
+if ConditionPassed(cond) then
+   Rd = Rn + shifter_operand + C Flag
+   if S == 1 and Rd == R15 then
+      if CurrentModeHasSPSR() then
+         CPSR = SPSR
+      else UNPREDICTABLE
+   else if S == 1 then
+      N Flag = Rd[31]
+      Z Flag = if Rd == 0 then 1 else 0
+      C Flag = CarryFrom(Rn + shifter_operand + C Flag)
+      V Flag = OverflowFrom(Rn + shifter_operand + C Flag)
+\end{alltt}
+\caption{ADC instruction operation Pseudo-code}
+\label{fig:adcpc}
+\end{figure}
+
+\newcommand{\Rd}{\armrf{Rd}\xspace}
+\newcommand{\Rn}{\armrf{Rn}\xspace}
+
+% JF: again, meaningless sentence
+% When reading the pseudo-code,
+% we have to understand the different meaning of symbols.
+% JF: new sentence instead
+There are some pitfalls related to the different meaning of symbols in
+the pseudo-code.  The same notation on different sides of '$=$' can be
+different.  For example, let us consider the assignment 
+``$\armrf{Rd = Rn + shifter\_operand + C Flag}$''.
+On the left-hand side of '$=$',
+the meaning of \Rd is the address of \Rd (the result will be assigned
+to address of \Rd).  On the other hand, the same \Rd on the right-hand
+side, e.g., in ``$\armrf{N Flag = Rd[31]}$'', means the content of
+register \Rd.  More subtle, the meaning of \Rd is different from the
+meaning of \Rn -- so such names are more like keywords than
+identifiers: on the right-hand side of an equation, \Rn represents the
+\emph{original} contents of \Rn, whereas \Rd represents the
+\emph{current} contents of \Rd.  And when \Rd and \Rn happen to be the
+same register, the value of \Rn on the right hand-side must stick to
+the original contents, not to the updated result.
+% JF: again, remove obvious sentence
+% Accurately understand the meaning of pseudo-code, we are able to
+% formalize the ARMv6 instructions correctly.
+
+As we explained for instruction \adc, the second operand is encoded by
+addressing mode 1 -- data-processing operand.
+There are five groups of addressing mode:
+\begin{itemize}
+\item Addressing mode 1 -- Data-processing operand
+\item Addressing mode 2 -- Load and store word or unsigned byte
+\item Addressing mode 3 -- Miscellaneous loads and stores
+\item Addressing mode 4 -- Load and store multiple
+\item Addressing mode 5 -- Load and store coprocessor.
+\end{itemize}
+
+Each of them contains several formats used to calculate the value used
+in the instruction operation.  For example, in addressing mode 1,
+there are eleven formats to encode the \armrf{shift\_operand}, and in
+addressing mode 2, there are nine.  The reference manual gives for
+each format an encoding table and an assembler syntax, and its
+operation in pseudo-code, which are similar to the description of ARM
+instructions. With the usage and notes of each instruction, we are
+able to match the instruction with its own addressing mode.
+
+\section{Formalization in Coq}
+
+\newcommand{\statedef}{\coqcode{state}}
+
+We want the formal specification to be as close as possible to the
+reference manual.  We also want it to be as simple as possible.  In
+this way, our formal model can be reliable and simple enough to reason
+about.
+
+Our formal model contains the basic library for integer representation
+and binary operations, a memory model, the main processor, the system
+control co-processor, the instruction set, the simulation loop, and a
+description of the initial configuration. % As explained above,
+% except the instruction set, all the other descriptions are manually defined.
+The bit vector definition and operations reuse the integer
+module from \compcert,
+instantiated to 32-bit words, 4-bit words for register numbers
+and 30-bit integers for memory addresses.
+
+The core part of the ARM processor is the ARM instruction set.  Its
+formalization is a rather heavy piece of work.  In particular, the
+pseudo-code of each instruction given by the ARM reference manual has
+to be formalized.  As a result, we get a formal semantics for ARMv6
+instructions.
+
+According to the structure presented in Figure~\ref{fig:armst},
+we formalize a \texttt{Record} type \statedef by composing
+the \statedef of the main processor
+and the \statedef of the system control coprocessor:
+
+\begin{alltt}
+Record state : Type := mk_state \{
+  (* Current program status register *)
+  cpsr : word;
+  (* Saved program status registers *)
+  spsr : exn_mode -> word;
+  (* Registers *)
+  reg : register -> word;
+  (* Raised exceptions *)
+  exns : list exception;
+  (* Processor mode *)
+  mode : proc_mode
+\}.
+
+Record state : Type := mk_state \{
+  (* registers *)
+  reg : regnum -> word;
+  (* memory *)
+  mem : address -> word
+\}.
+
+Record state : Type := mk_state \{
+  (* Processor *)
+  proc : Arm6_Proc.state;
+  (* System control coprocessor *)
+  scc : Arm6_SCC.state
+\}.
+\end{alltt}
+
+Considering the whole simulation system, we need another state
+representing not only the processor but also the execution status.
+We introduce a new type named \coqcode{semstate} to distinguish it from
+the \statedef for processors.
+The specification follows the monadic style \cite{wadjfp09}
+to represent calculations on the ARM processor states.
+
+This style takes the sequentiality of transformations on the state
+into account.  In the state monad, functions take a state as input and
+return a value combined with a new state.  Beyond the \statedef, two
+other pieces of information are handled: \coqcode{loc}, which
+represents local variables of the operation, and \coqcode{bo}, a
+Boolean indicating whether the program counter should be incremented
+or not; they are registered in the following record which is used for
+defining our monad.
+
+\begin{alltt}
+Record semstate := mk\_semstate \{ loc : local ;  bo : bool ; st : state \}.
+
+Inductive result \{A\} : Type :=
+    | Ok (\_ : A) (\_ : semstate) | Ko (m : message) | Todo (m : message).
+
+Definition semfun A := semstate -> @result A.
+\end{alltt}
+
+Note that in most cases, % every operation in our formal model % \coqdocvar{O\_Coq}
+functions will return an \coqdocvar{Ok} value.
+The value \coqdocvar{Ko} is used for \unpred states
+and is implicitly propagated with our monadic constructors for exceptions.
+The value \coqdocvar{Todo} is used in a similar way for unimplemented operations
+-- currently, it is still the case for coprocessor instructions.
+
+The simulation fetches the binary code at a given address; decodes it to corresponding
+assembly instruction; invokes the operation in library and executes it; and at last
+includes the computation of the address of the next instruction.
+The ARMv6 behavior semantics is described by functional
+rather than relational definitions.
+This means our specification is consistent and deterministic.
+The two main components of a processor simulator are then:
+
+\begin{itemize}
+\item
+  The decoder, which decodes a given binary word, retrieves the
+  name of an operation and its potential arguments in assembly code.
+  In Section \ref{ssc:dec} we will explain how it is generated from
+  the reference manual.
+\item
+  The precise description of transitions is the operation of instruction.
+  The definition contains operations on processor registers and memory;
+  thereby, the processor state is changed.
+  In the ARMv6 reference manual, these algorithms are written in
+  a ``pseudo-code'' syntax which calls low-level primitives. For example,
+  some code indicates setting a range of bits of a register by a given
+  value. And some operations might lead to unspecified
+  or forbidden results. In ARM processor, this is called \unpred. %``UNPREDICTABLE``
+  When the simulator meets these result,
+  it then returns a \coqcode{Ko} or \coqcode{Todo} state with
+  a message specific to the situation.
+ % \hide{The precise description of transformations performed by an operation
+ % on registers and memory.  In the reference manual of ARM, this is
+ % defined by an algorithm written in “pseudo-code” which calls
+ % low-level primitives for, e.g., setting a range of bits of a register
+ % to a given value.  Some situations are forbidden or left
+ % unspecified. For ARM processors, this results in a so-called \unpred
+ % state. The best choice, for a simulator, is then to
+ % stop with a clear indication of what happens.}
+\end{itemize}
+
+\subsection{Running an instruction}
+\label{ssec:fsmoa}
+
+Each instruction operation (\textit{O}) from the reference manual,
+for example in Figure~\ref{fig:adcpc}, gives a semi-formal
+description on how a instruction evaluates.
+Here we show how to specify it in by
+a corresponding Coq function (\textit{O\_coq}).
+
+Taking the instruction \adc as an example,
+its formalization in Coq is showed in the following function
+\coqcode{ADC\_step}, which operates on the parameter \coqcode{st}
+of type \statedef. Other parameters are found by searching
+for unspecified variables in the pseudo-code.
+Not all variables are declared globally. Variables which are
+assigned during the execution are local variables except the
+output registers, for example, \Rd.
+The body of the function is kept as close as possible to the pseudo-code
+by using notations, like $\texttt{<st>}$, as explained below:
+
+\begin{alltt}
+\small
+(* A4.1.2 ADC *)
+Definition ADC_step (S : bool) (cond : opcode) (d : regnum) (n : regnum)
+                    (shifter_operand : word) : semfun _ := <s0>
+  if_then (ConditionPassed s0 cond)
+    ([ <st> set_reg d (add (add (reg_content s0 n) shifter_operand)
+                    ((cpsr s0)[Cbit]))
+    ; If (andb (zeq S 1) (zeq d 15))
+       then (<st> if_CurrentModeHasSPSR (fun em =>
+                                          (<st> set_cpsr (spsr st em))))
+       else         (if_then (zeq S 1)
+          ([ <st> set_cpsr_bit Nbit ((reg_content st d)[n31])
+          ; <st> set_cpsr_bit Zbit
+                  (if zeq (reg_content st d) 0
+                   then repr 1
+                   else repr 0)
+          ; <st> set_cpsr_bit Cbit
+                  (CarryFrom_add3 (reg_content s0 n)
+                                  shifter_operand ((cpsr s0)[Cbit]))
+          ; <st> set_cpsr_bit Vbit
+                  (OverflowFrom_add3 (reg_content s0 n)
+                                     shifter_operand ((cpsr s0)[Cbit])) ])) ]).
+\end{alltt}
+
+\newcommand{\cpsrdef}{\coqcode{CPSR}}
+
+% JF: redundant sentence
+% The concrete example of \adc instruction helps to explain how
+% the formal specification of a state transition functions.
+For most of the ARMv6 instructions, executions are conditional.  These
+conditionally executed instructions must first check if the current
+condition (argument \coqcode{cond}) fits the required
+condition. Otherwise, the following operations will be skipped, and
+then go to the next instruction.  The \coqcode{S} bit argument
+indicates the instruction must update the status register \cpsrdef. If
+the argument \Rd refers to the program counter (R15), the updating of
+\cpsrdef is going to preserve the value of \coqcode{SPSR} when the
+current processor mode is one of the exception mode. If \Rd is one of
+the other general-purpose register, updating of \cpsrdef is done by
+updating the significant flags in \cpsrdef. The values are calculated
+by operations on argument \Rn which contains the first operand, and
+\coqcode{shift\_operand} which specifies the second operand.
+
+% JF: HERE
+
+\newcommand{\getst}{\texttt{\_get\_st}\xspace}
+
+Here we explain the notation \texttt{<st>}. It is the notation
+for function \getst, a monadic function that provides access to
+the current state \coqcode{st} at any place of the operation sequences:
+
+\begin{alltt}
+  Definition bind \{A B\} (m : semfun A) (f : A -> semfun B) : semfun B :=
+    fun lbs0 =>
+    match m lbs0 with
+      | Ok a lbs1 => f a lbs1
+      | Ko m => Ko m
+      | Todo m => Todo m
+    end.
+
+  Definition bind_s \{A\} fs B (m : semfun unit) (f : A -> semfun B) :
+    semfun B :=
+    bind m (fun _ lbs1 => f (fs lbs1) lbs1).
+
+  Definition _get_st \{A\} := bind_s st A (Ok tt).
+
+  Notation "’<’ st ’>’ A" := (\_get\_st (fun st => A))
+    (at level 200, A at level 100, st ident).
+\end{alltt}
+
+In general, every operation function terminates with
+\coqcode{Ok} state. However, errors are implicitly propagated with
+our monadic constructors: \coqcode{Ko} and \coqcode{Todo}.
+
+The other notations to keep the formalization well structured are the case
+statements \coqcode{If}, \coqcode{then}, \coqcode{else}, and \coqcode{if\_then},
+also the sequence statement denoted by brackets and semicolons:
+
+\begin{alltt}
+  Definition if_then_else \{A\} (c : bool) (f1 f2 : semfun A) : semfun A :=
+    if c then f1 else f2.
+
+  Notation "'If' A 'then' B 'else' C" := (if_then_else A B C)
+                                                      (at level 200).
+
+  Definition if_then (c : bool) (f : semfun unit) : semfun unit :=
+    if_then_else c f (Ok tt).
+\end{alltt}
+
+\begin{alltt}
+  Definition _set_bo b lbs := ok_semstate tt (loc lbs) b (st lbs).\
+
+  Definition block (l : list (semfun unit)) : semfun unit :=
+    let next_bo f1 f2 := next f1 (_get_bo f2) in
+    List.fold_left (fun f1 f2 =>
+      next_bo f1 (fun b1 =>
+      next_bo f2 (fun b2 => _set_bo (andb b1 b2))) ) l (Ok tt).
+
+  Notation "[ a ; .. ; b ]" := (block (a :: .. (b :: nil) ..)).
+\end{alltt}
+
+\subsection{Decoder}
+% \xm{Need to rewrite. Also in chapter 4}
+\label{ssc:dec}
+Now we consider the formalization of decoding instructions.
+An instruction encoding table, e.g. like in Figure~\ref{fig:adcet},
+summarizes all possibilities for this instruction in 32-bits representation.
+All the others will be decoded into \unpred or undefined.
+Then we can build an ARM instruction decoder for the ARMv6 architecture
+using all of the instruction encoding tables.
+
+% The instruction part of ARM reference manual is well structured, in which the
+% two elements can be used as the input of the automatic generation chain. The
+% first is the operation description we have introduced. The second is the
+% instruction encoding table.
+
+The main body of the decoder is a big pattern matching program. Each constructor
+is represented by 32 bits, either implicit or explicit.
+The Coq code in Figure~\ref{fig:coqdec} shows a thumbnail of the formal decoder,
+for the constructor corresponding to \adc.
+
+\begin{figure}[h]
+\begin{alltt}
+  Definition decode_conditional (w : word) : decoder_result inst :=
+    match w28_of_word w with
+    ...
+      (*4.1.2 - ADC*)
+      | word28 0 0 I_ 0 1 0 1 S_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+      =>
+        decode_cond_mode decode_addr_mode1 w
+          (fun add_mode condition =>
+            ADC add_mode S_ condition (regnum_from_bit n12 w)
+                                      (regnum_from_bit n16 w))
+    ...
+    end.
+\end{alltt}
+\caption{Formalized decoder of conditional executed instructions}
+\label{fig:coqdec}
+\end{figure}
+
+% JF->XM: you missed the main point, now introduced in a new sentence.
+The decoding of ARM instructions is difficult because some bit
+configurations are ambiguous at first sight: they could be interpreted
+as different kind of operations.  Such ambiguities are solved in the
+reference manual, which specifies a precedence order between the
+interpretations.  In our formalization, this precedence order is
+implemented by the order used for the different bit patterns, in the
+global pattern-matching construct.
+% To define a functional ARM instruction decoder, the first thing to do is to
+% decide the matching order.
+% The matching order is important because
+In Coq, the pattern matching is considered from
+top to bottom: a value belongs to the $i$th constructor if and only if it
+could not match any previous pattern;
+a pattern covered by previous patterns is considered as redundant
+by the Coq type checker.
+
+The 147 instructions are first partitioned into two groups, conditional and
+unconditional instructions.
+For ARM instructions, the condition field \texttt{cond} $[31:28]$ indicates
+the conditional execution of ARM instruction.
+% These four bits describe different meaning when they are set or cleared.
+% And instruction under such condition has to be executed with the corresponding
+% CPSR (Current Program Status Register) in which N, Z, C, V flags statisfy
+% the given condition. If not so, the instruction will have no effect on processor
+% state and go to the next instruction without notification.
+% A small mount of instruction can only be executed unconditionally.
+These instructions will be checked first by matching the first four bits with
+$0b1111$ representing an unconditional execution.
+The others are grouped by ARM instruction categories.
+Instructions belonging to the same category do not conflict with each other
+by the wild-card mechanism.
+We also define 5 levels for grouping conditional instructions.
+\begin{itemize}
+\item
+All multiply instructions without accumulator. They can be covered by
+similar multiply instruction with an accumulator. Instructions without
+accumulator fill the bits $[15:12]$ with $0b1111$, whereas instructions with
+an accumulator using them refer to the register for accumulator operand.
+\item
+Some instructions from ARMv5 architecture use the notion \texttt{SBO} or
+\texttt{SBZ} to express that the instruction bit is read as one/zero whatever the
+value of the bit is and it cannot be rewritten.
+These instructions need to be checked then, otherwise they could be hidden by
+some of the new ARMv6 instructions.
+\item
+A few load/store instructions work under the privileged mode.  % of processor
+Two significant bits $P$ and $W$ are assigned to a special combination of values
+to indicate this kind of instructions.
+We have to put them in higher priority, before
+the similar instructions working for the other processor modes.
+\item
+Instructions load/store from memory with a format other than \texttt{word}
+have a shape similar to the load/store with \texttt{word},
+but the four bits $[7:4]$ are used to refer to the load/store length --
+indicating
+whether it is a \texttt{half}, \texttt{double word}, or a \texttt{signed byte}.
+\item
+The last group contains all the operations with addressing modes.
+For decoding this kind of instructions,
+the decoder for addressing mode has to be called first.
+The addressing mode decoders are introduced below.
+\end{itemize}
+
+In Section~\ref{sec:ref} we mentioned that
+the ARM instruction set admits five kinds of addressing mode.
+They are used to encode the specific values appearing
+in the instruction pseudo-code.
+% JF: next sentence redundant with last item of the previous itemize
+% The decoding of instructions with addressing mode must call first the
+% decoder of addressing mode in order to know value fits to which format.
+The encoding tables for addressing mode are in the same form as the ones for
+ARM instructions, the formalization of addressing mode decoders are
+similar to the instruction decoder.
+The following definition shows one clause of the decoder for the addressing
+mode 1 -- Data-processing operands, to indicate that the \armrf{shift\_operand}
+is calculated by an immediate logical shift left. % JF->XM: Check this line
+
+\begin{alltt}
+ Definition decode_addr_mode1 (w : word) : decoder_result mode1:=
+  match w28_of_word w with
+  ...
+  (*5.1.5 - Data processing operands - Logical shift left by immediate*)
+  | word28 0 0 0 _ _ _ _ S_ _ _ _ _ _ _ _ _ _ _ _ _ _ 0 0 0 _ _ _ _ =>
+    DecInst _ (M1_Logical_shift_left_by_immediate
+                                     (regnum_from_bit n0 w) w[n11#n7])
+   ...
+  end.
+\end{alltt}
+
+\section{Experimentations}
+\label{ssc:vali}
+
+Altogether, we get an executable formal model of ARMv6 architecture,
+which can be translated to OCaml code by extraction of Coq code.
+However, for the executable version of the formal simulator,
+we could not integrate this extracted OCaml code
+because the extraction mechanism translates a Coq pattern,
+which matches more than one terms, into many OCaml patterns,
+which mention all possibilities one by one.
+
+More precisely,
+from the Coq model of ARMv6,
+it is possible to extract OCaml code and compile it to an executable simulator
+and perform some tests.
+% And it is also interesting to see tests running on a formal specified
+% simulator.
+% We provide the tests for the C specified Simlight.
+% In the mean time, we use these tests for our formal specification.
+The {\stt arm-elf-gcc} compiler is already used in our group to
+compile C tests into ELF files to be used in \simlight.
+These tests could be translated
+to a Coq representation, then extracted to OCaml.
+% % JF -> XM I think that you speak about simlight C code, not OCaml.
+% These small tests can be executed on the formal simulator in a sufficient
+% simulation speed, less than 1000 instructions per second.
+Running a simple direct sum test takes around five minutes.
+A sorting program would then need one day to be completed.
+% % JF -> XM : should be much less, no? anyway no need to state anything.
+% wheras the correponding C code only needs 0.78 seconds.
+
+
+% % JF -> XM : read carefully
+Directly simulating the ARM in Coq would even be worse.
+However, execution speed is not a concern in formal proofs,
+as far as no heavy computations steps are involved.
+% For such formal specification, we do not care the execution speed,
+% which aims to perform formal proofs for the simulation correctness.
+%
+% JF : right but commented out to avoid confusion at this stage
+% Similarly, the Coq decoder
+% can be used as a suitable formal model for correctness proofs in future work.
+
+
+%\xm{Need to be moved to chapter 5}
+% A more efficient way is to generate independently a decoder in OCaml code using
+% the similar generation stradegy as the Coq decoder generator.
+
+%\jf{So what? What is the actual situation?}
+
+% A same affect is also done for C representation of \simlight.
+% For C representation decoder, we do not use such sequential algorithm.
+% It lowers too much of the execution speed. Instead, a decoder based on
+% {\it switch} is in used. It is also generated automatically
+% using the same generating stradegy, and be put in
+% the same file as instructions set descriptions in C language
+% with cases in {\it switch} statement.
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "thesis"
+%%% End:

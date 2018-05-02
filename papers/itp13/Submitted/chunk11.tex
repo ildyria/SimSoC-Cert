@@ -1,0 +1,14 @@
+\begin{coqdoccode}
+\coqdocnoindent
+\coqdockw{Fixpoint} \coqdocvar{even\_f} (\coqdocvar{n}: \coqdocvar{nat}) : \coqdockw{Prop} :=\coqdoceol
+\coqdocindent{1.00em}
+\coqdockw{match} \coqdocvar{n} \coqdockw{with}\coqdoceol
+\coqdocindent{1.00em}
+\ensuremath{|} \coqdocvar{O} \ensuremath{\Rightarrow} \coqdocvar{True}\coqdoceol
+\coqdocindent{1.00em}
+\ensuremath{|} 1 \ensuremath{\Rightarrow} \coqdocvar{False}\coqdoceol
+\coqdocindent{1.00em}
+\ensuremath{|} \coqdocvar{S} (\coqdocvar{S} \coqdocvar{n}) \ensuremath{\Rightarrow} \coqdocvar{even\_f} \coqdocvar{n}\coqdoceol
+\coqdocindent{1.00em}
+\coqdockw{end}.\coqdoceol
+\end{coqdoccode}

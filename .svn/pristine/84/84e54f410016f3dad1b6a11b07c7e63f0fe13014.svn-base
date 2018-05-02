@@ -1,0 +1,584 @@
+\documentclass{llncs}
+% \documentclass[twocolumn]{article}
+
+% \usepackage{latexsym}
+% \usepackage{amssymb}
+\usepackage{graphicx}
+% \usepackage{cite}
+% \usepackage{url}
+% \usepackage{soul}
+% \usepackage{multirow}
+% \usepackage{listings}
+% \setstcolor{red}
+% \usepackage[utf8]{inputenc}
+% \usepackage[T1]{fontenc}
+
+% \usepackage{comment}
+% \usepackage{times}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newcommand{\hcinv}{\texttt{hc\_inversion}\xspace}
+\newcommand{\coqdockw}[1]{\texttt{#1}}
+\newcommand{\inversion}{\coqdockw{inversion}\xspace}
+\newcommand{\inv}{\coqdockw{inv}\xspace}
+\newcommand{\simlight}{\texttt{Simlight}\xspace}
+\newcommand{\compcert}{\texttt{CompCert}\xspace}
+\newcommand{\clight}{\texttt{Clight}\xspace}
+\newcommand{\simsoc}{\texttt{SimSoC}\xspace}
+\newcommand{\simsoccert}{\texttt{SimSoC-Cert}\xspace}
+\newcommand{\stt}{\small\tt}
+\newcommand{\why}{\texttt{Why}\xspace}
+\newcommand{\whyML}{\texttt{WhyML}\xspace}
+\newcommand{\whyCert}{\texttt{WhyCert}\xspace}
+\newcommand{\framac}{\texttt{Frama-C}\xspace}
+
+
+%replace XXX with the submission number you are given from the ASPLOS submission site.
+\usepackage[normalem]{ulem}
+\usepackage{xspace}
+\usepackage{alltt}
+\usepackage{amsmath}
+\usepackage{extarrows}
+
+
+\begin{document}
+%date not printed
+\date{}
+
+\title{SimSoC: A proven faithful full system simulator}
+\author{Vania Joloboff\inst{1} \and Jean\-Francois Monin\inst{2}}
+\institute{East China University, Shanghai, China, INRIA, France\\
+\email{vania.joloboff@inria.fr},\\
+\and UJF, Grenoble, France,\\
+\email{jean-francois.monin@ujf.fr}}
+\maketitle
+\thispagestyle{empty}
+
+\begin{abstract}
+
+This paper presents the SimSoC virtual prototyping framework. SimSoC
+is a simulation framework based on SystemC, using the SystemC clock,
+using dynamic binary translation to simulate the target software,
+which can be a bootloader or an operating system.
+The first part of the paper presents the general architecture of SimSoC.
+As part of the SimSoC project, we have proved that the ARM instruction
+set simulator is a high fidelity implementation of ARM architecture,
+using the Coq theorem prover and the second part describes this
+particular aspect. In conclusion, we are providing some clues on
+our current work related to usage of formal methods to detect
+whether an implementation satisfies the properties proved
+at the model level.
+\end{abstract}
+
+\section{Introduction}
+
+The SimSoC project is developing a simulation framework geared towards
+full system simulation, mixing hardware simulation including one or
+more ISS’s, able to simulate complete System-on-Chips or boards. The
+SimSoC simulation environment combines two technologies in a single
+framework: SystemC/TLM to model the new IP’s and interconnects, and
+one or more instruction set simulators (ISS). Each ISS is designed as
+a SystemC module that issues transactions towards the other models.
+
+In this workshop, we present the overall system architecture and the ISS
+technology. To achieve fast processor simulation, the SimSoC ISS
+technology uses a form of dynamic translation, using an intermediate
+representation and pre-generated code using specialization, a
+technique already used within virtual machines.
+
+The hardware models are standard SystemC TLM abstractions and the
+simulator uses the standard SystemC kernel. Therefore, the simulation
+host can be any commodity commercial off-the-shelf computer and
+yet provide reasonable simulation performance.
+The first part of this paper describes the generic architecture
+of the SimSoC framework.
+
+A hardware simulator such as SimSoC can be used to test critical
+software such as cryptographic or safety related embedded software.
+In these situations, it is important to work with the full system
+implementation, not only with the model specification. Then, it is
+important to use a very faithful simulator in order to ensure that no
+bias is introduced.  To achieve that goal, we have worked to
+demonstrate how it can be certified that the execution of a binary
+program on the Instruction Set Simulator of a target architecture
+indeed produces the expected results.
+This in fact requires several steps, to prove first that the
+translation from C code to machine code is correct, and second that
+the simulation of the machine code is also correct, that is, they all
+preserve the semantics of the source code; together with the fact that
+all of these proofs are verified using a theorem prover or proof
+checker, not subject to human error in the proof elaboration or
+verification. The end result is a faithful simulator.
+
+The second part of the paper describes how we have developed a
+faithful, certified simulator. The technique presented here relies on
+already existing tools, in particular the Coq proof assistant, the
+Compcert C compiler, a certified compiler for the C language, combined
+with our own work to prove the correctness of an ARM Instruction Set
+Simulator, integrated within SimSoC.
+
+
+\section{The SimSoC framework}
+
+An instruction-set simulator (ISS) is used to mimic the behavior of a
+target computer processor on a simulation host machine. The main task
+of an ISS is to carry out the computations that correspond to each
+instruction of the simulated program. There are several alternatives
+to achieve such simulation. In {\em interpretive simulation}, each
+instruction of the target program is fetched from memory, decoded, and
+executed and has been used in popular ISS such as
+Simplescalar~\cite{1000} It is flexible and easy to implement, but the
+simulation speed is slow as it wastes a lot of time in decoding. A
+faster technique to implement ISS is {\em dynamic
+  translation}~\cite{183032,233025,291063}.  With dynamic translation
+(see Figure~\ref{fig-issDT}), the target instructions are fetched from
+memory at runtime but they are decoded only on the first execution and
+the simulator translates these instructions into another
+representation, which is stored into a cache. On further execution of
+the same instructions, the translated cached version is used. If the
+code is modified during run-time, the simulator invalidates the cached
+representation.  Although dynamic translation introduces a compile
+time phase as part of the overall simulation time this translation
+time is amortized over time. In the past decade, dynamic translation
+technology has been favored, such as \cite{183032,233025,291063
+  reshadi-mishra-dynamicISS, scott-kumar-retargetable,
+  vala-duesterwald-dynamo} .
+
+\begin{figure}[tbhp]
+  \centering
+  \caption{Dynamic translation}
+  \label{fig-issDT}
+\end{figure}
+
+SimSoC belongs to Dynamic Cached Translation family of simulators.  In
+order to compare different techniques, and to provide different levels
+of trade-offs of accuracy vs. speed, \simsoc implements four modes of
+instruction simulation.  The first mode, named DT0, is interpretive
+simulation. This is the basis from which we can compare
+performance. The second mode, DT1, is dynamic translation. This mode
+shows the performance improvement obtained with basic dynamic
+translation.  The third mode DT2 is dynamic translation using a {\em
+  Partial evaluation}, a compiling optimization technique, also known
+as specialization~\cite{609205}. Specialization can be advantageously
+used in processor simulation, because data can often be computed at
+decoding time, and a specialized version of the generic instruction
+can be used to execute it.  The simulation code then uses fewer tests,
+fewer memory accesses and more immediate instructions. This technique
+has been used to some extent in the IC-CS simulator
+\cite{naul-braun-jit-iccs} and usage of partial evaluation in \simsoc
+is described in \cite{} .
+
+SimSoC dynamic translation in DT1 or DT2 uses an intermediate
+representation that is partly dependent on the target architecture,
+but does not involve the maintenance cost of a compiler.  A SimSoC ISS
+includes pre-compiled code loaded at start-up time. The decoder
+dynamically constructs an intermediate representation that maps the
+binary instructions to this precompiled code. The decoding phase
+mostly amounts to locating the appropriate code from the pre-compiled
+library. To increase simulation speed, yet another dynamic translation
+mode was added, DT3, which uses the LLVM~\cite{llvm} library to
+translate on the fly target code into LLVM, and then use the existing
+LLVM Just-In-Time compiler to generate native code.  The translation
+time from target code to LLVM, next from LLVM to native, can become
+lengthy and ultimately defeat the speed-up in execution time. Thus,
+DT3 actually implements a mixed translation mode with a method to
+evaluate and select only ``hot path'' code so that the LLVM
+translation is not systematic, but only operates on such hot paths,
+the remaining code being simulated with the DT2 cached
+translation. This effectively provides overall faster simulation. We
+have also experimented another mode with larger translation units, by
+dynamically determining strongly coupled basic blocks in the control
+flow graph. Finally, in order to benefit from multi-core simulation
+hosts, a distributed dynamic translation mechanism has been
+experimented.  In that mode, the native code translation is achieved
+by a separate dynamic translation server, that runs concurrently with
+the ISS on other processors. This work has been described in
+\cite{iaeng} and \cite{amasbt}.
+
+\subsection{Performance Estimate}
+
+SimSoC version released in open source is Loosely Timed. It advances
+the SystemC clock using the TLM quantum method. Each instruction is
+assumed to execute in some time, which defaults to a constant
+time. Each quantum of N instructions (a parameter) the clock is
+advanced by the amount of execution time for that quantum. This method
+makes it possible to run application software with timers and have
+some idea of the software performance, but it cannot be use for worse
+case analysis or fine grain performance estimates.
+
+Recently, we have worked on a Approximately Timed version, with
+a model of the instruction cache and the data cache and the pipe line.
+These models are abstract models. The ISS still uses the same dynamic binary
+translation, but for each basic block we compute separately
+the timing to execute it. Some of these computations can be done
+statically only once with back annotation of the blocks.
+This work is described in \cite{} but is not yet part of the
+main source code branch.
+
+
+\subsection{Full System Simulators simulation}
+
+\simsoc can fully simulate a hardware platform. In addition to the
+ISS, it also includes implementation of several Memory Management
+Units (MMU's). These MMU's are implemented as C++ subclass of a
+generic abstract MMU defined in the infrastructure. The generic MMU
+manages the TLB's and the details of the simulation of the target
+memory using host memory. Particular implementations of MMU's have
+been done for ARM, Power and MIPS chips. Similarly, a few interrupt
+controllers have been implemented.
+
+Because all these simulation models are implemented as SystemC modules
+using transaction modeling, one may elaborate complete platforms
+to simulate a full system simulator running an operating system.
+
+As a proof of concept, we have developed several simulators to simulate
+commercially available System-On-Chips. All of the SoC's we have
+developed are running the Linux operating system, using the Linux
+binary as is for the commercial chip. In order to boot Linux,
+it is also possible to use a boot loader such as U-Boot.
+
+The SoCs available are
+\begin{itemize}
+\item
+the SPEAr Plus600 circuit from ST Microelectronics.  This SoC contains among other
+components two ARM926 subsystems (dual core), together with ARM UART
+and interrupt controllers. We have developed functionally accurate
+simulators for all components directly necessary to boot Linux, in
+particular the interrupt controller, the UART, the Ethernet
+controller, the memory controller, the NAND flash memory controller
+and the serial memory controller. For other components that are not
+directly used by the Linux operating system, we have built {\em stub}
+simulation components such that the Linux drivers don't crash,
+although the simulation is not accurate.
+\item the Texas Instrument AM1705. For this SoC, we have also
+  developed an Ethernet controller model, and a bridge to real
+  Internet so that we can test the simulated platform connected to
+  real machines on the network, thanks to tunneling Ethernet packets
+  between the simulator and a bridge with the local Ethernet port.
+
+\item the FreeScale 8641D dual core Power architecture chip.
+\item We have under construction an example of the Power ez200 series,
+for which we develop an Approximately Timed version.
+\end{itemize}
+
+\section {The ARM certified simulator}
+\subsection{Background}
+\label{related}
+
+Coq~\cite{coqart} is an interactive theorem prover, implemented in
+OCaml. It allows the expression of mathematical assertions and
+mechanically checks proofs of these assertions.  Coq can also be
+presented as a dependently typed $\lambda$-calculus (or functional
+language).  For a detailed presentation, the reader can
+consult~\cite{coqmanual} or~\cite{coqart}. Coq is not an automated
+theorem prover: the logic supported by Coq includes arithmetic;
+therefore it is too rich to be decidable.  An interactive proof
+assistant, such as Coq, requires man-machine collaboration to develop
+a formal proof.  Human input is needed to create appropriate auxiliary
+definitions, choose the right inductive property and, more generally,
+to define the architecture of the proof.  Automation is used for
+non-creative proof steps and checking the correctness of the resulting
+formal proof. In our project, as a rich logical system is needed in
+order to manage the complexity of the ARM specification and of the
+proofs of C programs, it was decided to use Coq.
+
+\compcert is a formally verified compiler for the C programming
+language provided by INRIA~\cite{ccc, Leroy-Compcert-CACM}.  Program
+certification has to be based on a formal model of the program under
+study.  Such a formal model is itself derived from a formal semantics
+of the programming language. {\em Operational semantics} are used in
+\compcert to define the execution of C programs.  The compiler is
+specified, programmed, and proved in Coq. It has a complex translation
+chain of multiple steps, from C source code into assembly code. Every
+internal representation has its own syntax and semantics defined in
+Coq. It is formally verified in the sense that the generated assembly
+code is proved to behave exactly the same as the input C program,
+according to a formally defined operational semantics of the language.
+We extensively use the C language operational semantics in Coq, from
+which we get a formal model of the simulation program. We also use the
+\compcert basic library. It defines Coq data types for words,
+half-words, bytes etc., and bitwise operations and lemmas to describe
+their properties.  In our Coq model, we also use these low level
+representations and operations to describe the instruction set model.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Certified Simulation}
+\label{method}
+
+Our general objective to obtain a certified simulatoris illustrated in
+Figure~\ref{fig:diagram}.  Considering the ARM architecture (Version
+6), we need to have the following:
+\begin{itemize}
+\item a simulator of the ARM instruction set in (compcert) C
+  that we can obtain from the ARM Reference manual.
+\item obtain formal operational semantics of the ISS. Given some
+  source code in C, one can obtain through CompCertC the verified
+  machine code, or alternatively the Coq formal semantics of the
+  compiled program constructed by CompCert.
+\item prove, using a theorem prover, that the resulting ISS semantics
+  indeed implement an ARM processor, to verify that the semantics of
+  the simulator accurately modifies the processor state at each
+  step. For that, we need to prove that the results are compliant with a
+  formal model of the ARM architecture.
+\end{itemize}
+\begin{figure}
+\hfil\includegraphics[width=\linewidth, trim= 5mm 200mm 15mm 10mm, clip=true]
+{fig/diagram.pdf}
+\caption{Overall goal}
+\label{fig:diagram}
+\end{figure}
+
+These steps are described in the following paragraphs.
+
+\subsection{Simulator Semantics}
+
+The whole process starts with the ARM reference manual Version 6
+available from ARM web site \cite{arm6refman}.  There are 147 ARM
+instructions in the ARM V6 architecture.  For each instruction, the
+manual provides its encoding table, its syntax, a piece of pseudo-code
+explaining its own operation, its exceptions, usage, and notes.  The
+simulator consists of two files extracted from the manual a \compcert
+C file to be linked with other components of \simsoc (e.g memory
+access) and files representing each instruction in \compcert C
+abstract syntax to be used for correctness proof.
+
+In order to formally reason on the correctness of the simulator, we
+need to have a formal model of the C implementation of the ARM
+architecture as described above, using the operational semantics of C
+formalized in Coq.  The processor states in the C implementation model
+are complex, not only due to the inherent complexity of the C language
+memory model, but also because of optimization and design decisions
+targeting efficiency. For example, the C implementation uses large
+embedded \emph{struct}s to express the ARM processor state.
+Consequently the model of the state is a complex Coq record type,
+including not only data fields but also proofs to guaranteed access
+permission, next block pointer, etc. Transitions by the C
+implementation are defined by relations which happen to be
+functions. The kind of record type mentioned in the previous item is
+too complex to execute formal calculation with it, so it is more
+convenient to describe the state transformations of memory with a
+relation.
+\item The global state is based on a complex memory model with load
+  and store functions that are used for read/write operations.
+\end{itemize}
+
+However, thanks to \compcert operational semantics, we are able to
+formally express the semantics of the C implementation of the ARM
+processor.
+
+\subsection{Proof}
+
+We have a C implementation of the ARM instruction set.  To prove that
+it is correct we need to have a formal specification of that
+architecture, and prove that, given the initial state of the system,
+the execution of an instruction as implemented by a C function results
+in the same state as the formal specification.  Ideally the formal
+specification of the ARM architecture should be provided by the
+vendor. But it is not the case, such a formal model is not available
+on their web site, hence we had to build one. So, we chose to define a
+formal model of ARM architecture in Coq as well, derived from the
+architecture reference manual. As Coq models are executable, we could
+validate the model with real programs.
+
+The state of the ARM V6 processor defined in the formal model is called
+the \emph{abstract state}.  On the other hand, the same state is
+represented by the data structures corresponding to C semantics that
+we shall call the \emph{concrete state}.  In order to establish
+correctness theorems we need to relate these two models.  Executing
+the same instruction on the two sides produces a pair of new processor
+states which should be related by the same correspondence. Informally,
+executing the same instruction on a pair of equivalent states should
+produce a new pair of equivalent states.
+
+\begin{figure}
+\hfil\includegraphics[width=.75\linewidth]{fig/theoremca.pdf}
+\caption{Theorem statement for a given ARM instruction}
+\label{fig:theoca}
+\end{figure}
+
+Our theorems are schematized by Figure~\ref{fig:theoca}. The complete
+proof is too lengthy for this article, and we only provide here an
+outline of the method.  The correctness proof is based on one hand on
+the semantics of the ARM architecture formal model, and on the other
+hand on the \compcert C representation of the ARM instructions. We
+need to prove that the operational semantics of that C code correspond
+to the ARM formal specification.  The proof consists in defining
+provable projections from the C state to the formal model to prove
+their equivalence, as represented in Figure~\ref{fig:proj}.  To state
+the correctness theorem, we compare the \compcert C semantics of a
+function corresponding to an ARM instruction with its formal
+definition.
+
+In the C instruction set simulator, there is a standalone C function
+for each ARM V6 instruction.  Each function (instruction) has its own
+separate correctness proof.  Every function is composed of its return
+type, arguments variables, local variables, and the function body. The
+function body is a sequence of statements including assignments and
+expressions. Let us consider as an example the ARM instruction
+\texttt{BL} (\texttt{Branch and Link}). The C code is:
+\small{
+\begin{verbatim}
+void B(struct SLv6_Processor *proc, const bool L,
+       const SLv6_Condition cond, const uint32_t signed_immed_24){
+ if (ConditionPassed(&proc->cpsr, cond))
+  if (L == 1) {
+   set_reg(proc, 14, address_of_next_instruction(proc));
+   set_pc_raw(proc, reg(proc,15)+(SignExtend_30(signed_immed_24)<<2));
+ }
+}
+\end{verbatim}
+}
+
+The main strategy is to define a projection from the concrete state to
+the abstract state.  On both sides, the execution of an instruction is
+described by a state transition.  For the two representations,
+``State'' refers to the full description of the system. This
+correspondance is expressed by a projection relating the two models of
+the state. The proofs start from the abstract state described by the
+formal specification.  The C state representations introduce a complex
+memory model, and we need a mapping to the formal model. In order to
+verify the projection of the pair of original states, we need the
+following data: the initial memory state, the local environment, and
+the formal initial processor state.  The projection is meaningful only
+after the C memory state is prepared for evaluating the current
+function body representing a ARM instruction.  In the abstract Coq
+model, we can directly use the processor state \texttt{st}.  But on the C
+side, the memory state must provide the contents of every parameter,
+especially the memory representation of the processor state.  We also
+need to observe the modification of certain blocks of memory
+corresponding to local variables.
+
+Fortunately \compcert formalizes the C memory model.  The semantics of
+\compcert C consider two environments. The global environment
+\emph{genv} maps global function identifiers, global variables
+identifiers to their blocks in memory, and function pointers to a
+function definition body.  The local environment \emph{env} maps local
+variables of a function to their memory blocks reference. When the
+program starts its execution, \emph{genv} is built. Thus, we have all
+elements ready to make the projection from the local environment to
+the abstract state to verify their equivalence.  Next, we need to
+consider the execution of the instruction.  The semantics are defined
+as a relation between an initial expression and an output expression
+after evaluation.  Then the body of the function is executed.  On the
+abstract side, the new processor state is obtained by running the
+formal model.  On the \compcert C side, the execution is yielding a
+new memory state \textbf{mfin}.  Finally, we have to verify that the
+projection from the concrete state \textbf{mfin} should provide the
+same abstract state.
+
+The proof is performed in a top-down manner. It follows the definition
+of the instruction, analyzing the expression step by step.  The
+function body is split into statements and then into expressions.
+When evaluating an expression, we search for two kinds of information.
+the first one is how the memory state changes on \compcert C side; the
+other is whether the results on the abstract and the concrete model
+are related by the projection. To this effect, we had to demonstrate a
+number of lemmas such as
+\begin{enumerate}
+\item
+  \textit{Evaluating a \compcert expression with no modification on the memory state.}\\
+  This lemma is concerned with the expression evaluation on \compcert
+  C side and in particular the C memory state change issue.  For
+  example, evaluating the boolean expression $Sbit~==~1$ must return
+  an unchanged memory state.
+\item
+\textit{Result of the evaluation of an expression with no modification on the memory.}
+At the end of an evaluation, a value of some type should be returned,
+in both the \compcert C model and the formal model.Continuing the example above, the binary operation $Sbit~==~1$ must return a boolean value $true$ or $false$.
+\item
+  {\it Memory state changed by storage operation or side effects of evaluating expression}\\
+  Evaluating some expressions can modify the memory state.  Then we need
+  lemmas stating that corresponding variables in the abstract and in
+  the concrete model will evolve consistently.
+\item
+\textit{Function call.}\\
+The \compcert C AST of an external function call contains the types of
+input arguments and of the returned value, and an empty body.
+\compcert provides the expected properties of a few built-in external
+functions such as \texttt{malloc} and \texttt{free}.
+We have proceeded similarly for the external functions of the ARM
+simulator.  The general expected properties of an external call are
+that (i) the call returns a result, which has to be related to the
+abstract state, (ii) the arguments must comply with the
+signature.  (iii) after the call, no memory blocks are invalidated,
+(iv) the call does not increase the access permission of any valid
+block, and finally that the memory state can be modified only when the
+access permission of the call is granted. For each external call, we
+verify such required properties.
+\end{enumerate}
+
+With these lemmas, and a few others not described here, we can build
+the proof scripts for ARM instructions.  For that, we are decomposing
+the ARM instruction execution step by step to perform the execution of
+the C programs. To discover the relation between memory states before
+and after evaluating the C code, we have to {\em invert} the
+hypotheses of operational semantics to follow the clue given by its
+definition, to verify the hypotheses relating concrete memory states
+according to the operational semantics. An {\em inversion} is a kind
+of forward reasoning step that allows for users to extract all useful
+information contained in a hypothesis. Every instruction contains
+complex expressions, but each use of \inversion will go one step only.
+If we want to find the relation between the memory states affected by
+these expressions, we have to invert many times. In order to reduce
+the proofs size and get better maintainability, we studied a general
+solution to this problem, and developed a new inversion tactics in
+Coq.  As a result, considering the example of \texttt{same\_copy\_SR}
+where 18 standard \inv were used in the first proof script we
+developed, our tactics reduced them into one step.  Thanks to this new
+tactics, the size of the proofs has become smaller and the proof
+scripts are more manageable. The size vary with the instructions
+complexity from less than 200 lines (e.g 170 for LDRB) to over 1000
+(1204 for ADC).  As a result, for each ARM instruction, we have
+established a theorem proving that the C code simulating an ARM
+instruction is equivalent to the formal specification of the ARM
+processor. All of these lemmas and theorems are verified by the Coq
+theorem prover.
+
+This work has been described in more detail in \cite{xiaomu}.
+
+\subsection{Certified Faithful Simulation}
+
+Based on the work afore mentioned, we can now consider the certified
+execution of a C program. Consider for example the DES
+cryptographic encryption code. Looking at the binary code of that
+function generated by the compiler, one may observe that this code
+actually uses only 22 different types of ARM instructions.
+Given that we have a proof that the machine code generated from C is
+correct, thanks to \compcert, and now a proof of the ARM instruction
+set for these instructions, we have a proof that the simulation of the
+algorithm on our ARM simulator is conformant with the algorithm.
+
+We acknowledge a weak point in our chain, due to the fact that the
+hardware vendors do not provide formal semantics of their instruction
+set. Because such formal models are unavailable, we had to define a
+formal model of the ARM processor ourselves, which may be incorrect.
+As Coq specifications are executable, we have been able to validate
+our ARM formal model by checking that we obtain identical results with
+real test programs, but this is not a formal proof... If the vendors
+would make public formal specifications of their architectures, then
+our toolchain could become fully verified.
+
+We have constructed a faithful full system simulation framework that
+makes it possible to certify that the simulation of a program is
+conformant with the formal definition of the algorithm, by leveraging
+off from two existing tools namely, Compcert-C, which has defined
+formal C semantics and formally proven the code generator, and Coq.
+We have added to SimSoc a proven generated simulator of the ARM
+instruction set.  Although we have considered a small example in the
+paper, there is no limit on the size of the C code that can be
+certified as long as the instruction set has been certified.  In fact,
+if there existed a publicly availale formal model of the ARM processor
+approved by ARM Ltd company, our work could be construed to define a
+{\em certified execution of a C program}...
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Conclusion}
+\label{conclusion}
+
+
+\bibliographystyle{IEEEtran}
+\bibliography{references}
+
+\end{document}

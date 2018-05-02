@@ -1,0 +1,139 @@
+Soutenance de Thèse de Doctorat, par Xiomu SHI
+
+Vous êtes cordialement invités à la soutenance de la thèse de Xiaomu
+Shi, effectuée au LIAMA Pékin, université de Tsinghua, et à VERIMAG,
+UJF, sous la direction conjointe de Jean-François Monin et Vania
+Joloboff, ainsi qu'au pot qui s'ensuivra.
+
+Sujet : Certification of an Instruction Set Simulator
+
+Lieu : VERIMAG, amphi CTL
+Date : 10 juillet, 14h
+
+Jury : Yves Bertot
+       Sandrine Blazy, rapporteur
+       Vania Joloboff, co-directeur
+       Xavier Leroy
+       Laurent Maillet-Contoz
+       Claude Marché, rapporteur
+       Jean-François Monin, directeur
+       Frédéric Rousseau
+
+---------------------------------------------------------------------
+
+Cette thèse expose nos travaux de certification d'une partie d'un
+programme C/C++ nommé SimSoC (Simulation of System on Chip), qui
+simule le comportement d'architectures basées sur des processeurs tels
+que ARM, PowerPC, MIPS ou SH4. Un tel simulateur peut être utilisé
+pour developper le logiciel d'un système embarqué spécifique, afin de
+raccourcir les phases des développement et de test, en particulier
+quand la vitesse de simulation est réaliste (environ 100 millions
+d'instructions par seconde par coeur dans le cas de SimSoC).
+
+SimSoC est un logiciel complexe, comprenant environ 60000 de C++,
+intégrant des parties écrites en SystemC et des optimisations non
+triviales pour atteindre une grande vitesse de simulation.  La partie
+de SimSoC dédiée au processeur ARM, l'un des plus répandus dans le
+domaine des SoC, transcrit les informations contenues dans un manuel
+épais de plus de 1000 pages.  Les erreurs sont inévitables à ce niveau
+de complexité, et certaines sont passées au travers des tests
+intensifs effectués sur la version précédente de SimSoC pour l'ARMv5.
+
+Un problème critique se pose alors : le simulateur simule-t-il
+effectivement le matériel réel ?  Pour apporter des éléments de
+réponse positifs à cette question, notre travail vise à prouver la
+correction d'une partie significative de SimSoC, de sorte à augmenter
+la confiance de l'utilisateur en ce similateur notamment pour des
+systèmes critiques.
+
+Nous avons concentré nos efforts sur un composant particulièrement
+sensible de SimSoC : le simulateur du jeu d'instructions de l'ARMv6,
+faisant partie de la version actuelle de SimSoC.
+
+Les approches basées sur une sémantique axiomatique (logique de Hoare
+par exemple) sont les plus répandues en preuve de programmes
+impératifs. Cependant, nous avons préféré essayer une approche moins
+classique mais plus directe, basée sur la sémantique opérationnelle de
+C: cela était rendu possible en théorie depuis la formalisation en Coq
+d'une telle sémantique au sein du projet CompCert et mettait à notre
+disposition toute la puissance de Coq pour gérer la complexitité de la
+spécification. À notre connaissance, au delà de la certification d'un
+simulateur, il s'agit de la première expérience de preuve de
+correction de programmes C à cette échelle basée sur la sémantique
+opérationnelle.
+
+Nous définissons une représentation du jeu d'instruction ARM et de ses
+modes d'adressage formalisée en Coq, grâce à un générateur automatique
+prenant en entrée le pseudo-code des instructions issu du manuel de
+référence ARM. Nous générons également l'arbre syntaxique abstrait
+CompCert du code C simulant les mêmes instructions au sein de
+Simlight, une version allégée de SimSoC.
+
+À partir de ces deux représentations Coq, nous pouvons énoncer et
+démontrer la correction de Simlight, en nous appuyant sur la
+sémantique opérationnelle définie dans CompCert.  Cette méthodologie a
+été appliquée à au moins une instruction de chaque catégorie du jeu
+d'instruction de l'ARM.
+
+Au passage, nous avons amélioré la technologie disponible en Coq pour
+effectuer des inversions, une forme de raisonnement utilisée
+intensivement dans ce type de situation.
+
+
+---------------------------------------------------------------------
+
+
+This thesis introduces the work of certifying a part of a C/C++
+program called SimSoC (Simulation of System on Chip), which simulates
+the behavior of architectures based on a processor such as ARM,
+PowerPC, MIPS or SH4.  Such a simulator can be used for software
+development of a specific embedded system, to shorten the development
+and test phases, especially when, as is the case for SimSoC, it offers
+a realistic simulation speed (about 100 Millions of instructions per
+second per individual core).
+
+SimSoC is a complex software, including about 60,000 lines of C++
+code, many complex features from SystemC library, and optimizations to
+achieve high simulation speed. The subset of SimSoC dedicated to the
+ARM processor, one of the most popu- lar processor design, somehow
+translates in C++ the contents of the ARM reference manual, which is
+1138 pages long. Mistakes are then unavoidable for such a complex
+application. Indeed, some bugs were observed even after the previous
+version of SimSoC, for ARMv5, was able to boot linux.
+
+Then a critical issue is : does the simulator actually simulate the
+real hardware ? In our work, we aim at proving a significant part of
+the correctness of SimSoC in order to support the claim that the
+implementation of the simulator and the real system will exhibit the
+same behavior. Then a SimSoC user can trust the simulator, especially
+in very critical uses.
+
+We focused our efforts on a critical part of SimSoC : the instruction
+set simulator of the ARMv6 architecture, which is considered in the
+current version of SimSoC.
+
+Approaches based on axiomatic semantics (typically, Hoare logic) are
+the most popular for proving the correctness of imperative
+programs. However, we prefered to try a less usual but more direct
+approach, based on operational semantics : this was made possible in
+theory since the development of an operational semantics for the C
+language formalized in Coq in the CompCert project, and allowed us to
+use the comfortable logic of Coq, of much help for managing the
+complexity of the specification.  Up to our knowledge, this is the
+first development of formal correctness proofs based on operational
+semantics, at least at this scale.
+
+We provide a formalized representation of the ARM instruction set and
+addressing modes in Coq, using an automatic code generator from the
+instruction pseudo-code in the ARM reference manual. We also generate
+a Coq representation of a corresponding simulator in C, called
+Simlight, using the abstract syntax defined in CompCert.
+
+From these two Coq representations, we can then state and prove the
+correctness of Simlight, using the operational semantics of C provided
+by CompCert. Currently, proofs are available for at least one
+instruction in each category of the ARM instruction set.
+
+During this work, we improved the technology available in Coq for
+performing inversions, a kind of proof steps which heavily occurs in
+our setting.

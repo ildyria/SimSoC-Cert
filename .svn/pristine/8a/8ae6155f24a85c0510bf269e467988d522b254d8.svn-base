@@ -1,0 +1,305 @@
+\chapter{Simulation of ARMv6 in C}
+\label{cpt:carm}
+
+% \jf{Short introduction in 2 or 3 sentences}
+
+% \jf{In particular comment section 2: optimized Simlight
+% could have been considered but it is not the case.
+% The conclusion (last chapter, Future work) should then say a word on
+% extending this work to simlight 2.}
+
+Here we introduce \simlight, our certification target.
+\simlight is a light version of the simulator \simsoc,
+which includes only the ARMv6 instruction set simulator
+with a simplified memory model.
+
+We also give a brief description of \simlight 2,
+which includes several optimizations from \simsoc
+to obtain a higher simulation speed.
+The extension to the optimized version 2 will be discussed as future work in
+conclusion Chapter~\ref{cpt:concl}.
+
+% We have two versions of \simlight:
+% version 1 is the current certification target,
+% version 2 is based on version 1 but several optimizations were applied
+% to obtain a higher simulation speed.
+
+% Until now we only considered \simlight version 1,
+% which is the closest to the formal description.
+% The extension to the optimized version 2 will be discussed as future work in
+% conclusion Chapter~\ref{cpt:concl}.
+
+\selectlanguage{french}
+\section*{Résumé}
+
+\begin{resume}
+Ce chapitre est consacré à \simlight, la cible que nous cherchons à certifier.
+\simlight est une version allégée du simulateur \simsoc,
+qui ne contient que le simulateur de jeu d'instructions,
+avec un moèle mémoire simplifié.
+
+Nous donnons aussi une brève description de \simlight 2,
+qui intègre plusieurs optimisations utilisées dans \simsoc
+afin d'accélérer la simulation.
+L'extension de notre travail de certification à la version 2 optimisée
+est considérée en perspective dans la conclusion,
+au chapitre~\ref{cpt:concl}.
+\end{resume}
+
+\selectlanguage{english}
+
+\section{Simlight}
+\label{sec:slv6}
+
+Similarly to the Coq formal model,
+% JF -> XM: "a data structure in C specification" does not work
+% because C is a dirty prgramming language with dirty semantics
+% A best ACSL is a specification language related to C
+\simlight contains a data structure in C to represent the ARMv6 processor.
+As the structure of the processor did not change between ARMv5 and ARMv6,
+this data structure was copied from the previous version of \simsoc for ARMv5.
+%
+It was designed to optimize execution,
+which makes it rather different from the formalization in Coq that keeps things
+as simple as possible, and as close as possible to the reference manual.
+% JF : I added then commented out the following, because it is said below.
+% In particular, it contains redundant or additional fields, as well as aliases.
+
+% XM
+% In Figure~\ref{fig:procc}, the C definition of the processor state is showed.
+% JF
+The C definition of the processor state is given in Figure~\ref{fig:procc}.
+
+\begin{figure}
+\begin{alltt}
+struct SLv6_Processor \{
+  struct SLv6_MMU *mmu_ptr;
+  struct SLv6_StatusRegister cpsr;
+  struct SLv6_StatusRegister spsrs[5];
+  struct SLv6_SystemCoproc cp15;
+  size_t id;
+  uint32_t user_regs[16];
+  uint32_t fiq_regs[7];
+  uint32_t irq_regs[2];
+  uint32_t svc_regs[2];
+  uint32_t abt_regs[2];
+  uint32_t und_regs[2];
+  uint32_t *pc; /* = &user_regs[15] */
+  bool jump;
+\};
+\end{alltt}
+\caption{ARM Processor state in C}
+\label{fig:procc}
+\end{figure}
+
+Similarly,
+the data structure \texttt{SLv6\_Processor} contains
+the most important components of the ARM processor:
+a pointer to the location of the structure representing the Memory Management Unit (MMU),
+a status register structure for CPSR,
+an array for the status register structure of SPSR,
+a structure for CP15 (SCC),
+a field for the processor id (useful when there is more than one core),
+six arrays for registers of each processor mode,
+one field for PC,
+and a boolean field \texttt{jump}
+which indicates whether the instruction modifies the PC or not.
+
+For a better illustration, the C definition of the status register structure is
+given in Figure~\ref{fig:stregc}.
+
+\begin{figure}
+\begin{alltt}
+struct SLv6_StatusRegister \{
+  bool N_flag; /* bit 31 */
+  bool Z_flag;
+  bool C_flag;
+  bool V_flag; /* bit 28 */
+  bool Q_flag; /* bit 27 */
+  bool J_flag; /* bit 24 */
+  bool GE0; /* bit 16 */
+  bool GE1;
+  bool GE2;
+  bool GE3; /* bit 19 */
+  bool E_flag; /* bit 9 */
+  bool A_flag;
+  bool I_flag;
+  bool F_flag;
+  bool T_flag; /* bit 5 */
+  SLv6_Mode mode;
+  uint32_t background; /* reserved bits */
+\};
+\end{alltt}
+\caption{ARM status register structure in C}
+\label{fig:stregc}
+\end{figure}
+
+In order to gain high speed for the simulator,
+the processor type has been designed to have
+several redundant fields; for example, the PC field is a pointer
+to the 15th register in user register array.
+Indeed, the PC field is significant as it allows
+to judge whether the execution is branched or not,
+so that the running program can be split into code blocks.
+And the PC field is referred to many times during execution.
+% XM
+% This part is related to a very important optimization method
+% JF
+There is another important optimization method
+in \simsoc simulation ~\ref{sec:simsoc}.
+In order to optimize execution time, the data structures used to
+represent the processor state do not reflect the hardware structure.
+For example, whereas a bit is used in hardware to store a flag,
+a boolean variable is used to represent that bit in the C code.
+For example the 4 bits in the status register that indicate the traditional
+N, Z, C, V flags (Negative, Zero, Carry and oVerflow) for condition code,
+are represented by 4 booleans variables.
+Similarly, an array of status registers is used to represent the
+status in the different modes, indexed by the current mode.
+% The processor mode is not directly placed inside the data structure
+% for the processor state, but for the status register.
+% And there is another way to represent what is the current processor mode
+% by looking at which register array is currently used.
+% For each processor mode there is a corresponding register array.
+% This is because the simulator never uses mode as a condition,
+% it can go straight to the field that want to look for to save time.
+% By contrast, the status register is not a simple 32-bit integer.
+% It is also a data structure containing every significant bit of the register.
+It means that the pseudo-instructions code that manipulate these data
+structures must be translated by appropriate C code that accesses the
+corresponding data,
+
+% These flags in the Current Program Status Register (CPSR) are tested by most of the
+% instructions to determine whether the instruction is going to be executed or skipped.
+% All the other bits are seen as reserved or \texttt{background}.
+% Since they are reserved for future extension and must be read as zero,
+% any write operation on them should be ignored.
+% For future compatibility, they must be written with the same value from the same bits.
+
+As a result, the C code of the semantics functions has a structure
+close to the pseudo-code in the reference manual but with additional
+access functions to access the data in an optimized implementation.
+Below is the example of the ADC instruction:
+
+\begin{alltt}
+\small
+/* ADC */
+void ADC(struct SLv6_Processor *proc,
+    const bool S,
+    const SLv6_Condition cond,
+    const uint8_t d,
+    const uint8_t n,
+    const uint32_t shifter_operand)
+\{
+  const uint32_t old_Rn = reg(proc,n);
+  const uint32_t old_CPSR = proc->cpsr;
+  if (ConditionPassed(&proc->cpsr, cond)) \{
+    set_reg_or_pc(proc,d,((old_Rn + shifter_operand) + old_CPSR.C_flag));
+    if (((S == 1) && (d == 15))) \{
+      if (CurrentModeHasSPSR(proc))
+        copy_StatusRegister(&proc->cpsr, spsr(proc));
+      else
+        unpredictable();
+    \} else \{
+      if ((S == 1)) \{
+        proc->cpsr.N_flag = get_bit(reg(proc,d),31);
+        proc->cpsr.Z_flag = ((reg(proc,d) == 0)? 1: 0);
+        proc->cpsr.C_flag = CarryFrom_add3
+                              (old_Rn,shifter_operand,old_CPSR.C_flag);
+        proc->cpsr.V_flag = OverflowFrom_add3
+                              (old_Rn,shifter_operand,old_CPSR.C_flag);
+      \}
+    \}
+  \}
+\}
+\end{alltt}
+% VJ replacement
+
+
+As the C language accepted by Compcert is a subset of the full ISO C language,
+the generator has been constructed such that it only generates C code
+in the subset accepted by the compcert compiler.
+
+Nonetheless it can be compiled with other C compilers such as GCC
+to obtain better performance. Even though in this case, the resulting
+machine code is not guaranteed to be correct (there are well known
+GCC optimization bugs...), at least the original C code has been
+proven by our technique to be conformant with the ARM semantics.
+
+The ARM V6 code generator not only generates the semantics functions,
+it also generates the decoder of binary instructions supported in V6
+architectures. This decoder is obtained by compiling the opcodes
+information. The generated decoder is probably not optimal in
+performance, but as \simsoc uses a cache to store the decoded
+instructions, the performance penalty is marginal.
+% The decoder in \simlight also uses the encoding table of each instruction
+% as reference. The principle is to use an \texttt{if...} statement to filter
+% the impossible cases.
+
+% To be precise, \simlight (Version 1) is in \compcert-C, the
+% large subset of the C language considered in the \compcert project.
+% Then the whole simulator can be compiled with the certified compiler \compcert.
+% In this way, errors coming from an ordinary C compiler can be avoided
+% and the compilation result is also reliable.
+% Generating directly \compcert-C code makes sure that none
+% unaccepted code has been ignored by the compiler.
+
+\section{Optimization on Simlight version 2}
+\label{sec:slv62}
+
+In this section, we introduce the second version of \simlight,
+that include optimizations to reduce simulation time.
+The optimization methods can be categorized as follows:
+\begin{itemize}
+\item
+  \textit{flattening} is used in \simlight version 2,
+  in order to merge some instructions with their addressing mode.
+  The result of \textit{flattening} can improve the simulation speed.
+  How to perform instructions flattening is introduced in Section~\ref{sec:codegen}.
+\item
+% modified vy VJ
+  Partitioning the semantics function into hot and cold ones. C
+  compilers now supports the {\em hot} and {\em cold} attributes on
+  functions. When a function is declared hot, the compiler generates
+  code that minimizes execution time. When it is cold, it minimizes
+  code size. It also generates directives for the linker to group the
+  hot and cold functions together to increase program locality. The
+  temperature information (i.e. hot or cold) is obtained by running
+  the program on sample input to generate profiling data, such as
+  obtained with the GPROF profiling tool.  Based on profiling data,
+  the \simsoc generator can partition the functions between cold and
+  hot in order to benefit from these compiler optimizations.
+  % Partitioning the semantics function into hot and cold. That means the
+  % compiler does not inline the functions which are not called frequently
+  % and gather them to be ``cold''. In contrary, the hot call sites are
+  % inlined in order to keep the code size small and shorten the
+  % compilation time or other benefits from inlining functions.
+  % Keeping frequently used functions together in ``hot'' group, the
+  % instruction cache has been less polluted than cold functions.
+  % GCC with a certain option can direct the partition of functions.
+  % A parameter ``wgt'' (weight) is computed by the gcc compiler,
+  % which is a space-separated list of non-negative integers of
+  % length the number of instructions. It is given by \simsoc experiment.
+  % And it is required by GCC as the basis of hot/cold semantics function partition.
+  % If ``wgt'' is not up to date, then the hot/cold partition is weak.
+% \item
+%   Another way of grouping instruction, by the list of parameters.
+%   The ones with the same parameter list will be grouped together.
+% \item
+%   Shorten the head file of instruction set specifications because they are
+%   identical to each other.
+% VJ remark, these changes improve readability of the code
+% and bug fixing but not performance
+\item
+  Specialize the instruction of boolean parameter values.
+\item
+  Remove the instructions about coprocessor because the coprocessor is not
+  supported yet. It can save time in encoding and decoding phases.
+\end{itemize}
+
+
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "thesis"
+%%% End:

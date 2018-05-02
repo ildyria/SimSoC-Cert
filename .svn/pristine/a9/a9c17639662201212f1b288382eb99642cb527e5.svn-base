@@ -1,0 +1,40 @@
+- In chapter 1, you should cite the following recent reference.
+Shilpi Goel and Warren Hunt.
+Automated Code Proofs on a Formal Model of the X86
+VSTTE 2013 (paper available from :
+https://sites.google.com/site/vstte2013/home/program)
+
+- Chapter 2, page 24.
+The definition of "state" should be given. 
+The last rule in Figure 2.2 is not good. It should mimic the E-Assign rule
+of the eval predicate (page 29).
+
+- Page 35. CompCert C semantics.
+
+Some explanations are missing at the beginning of section 2.3.2.
+Some limitations are not related to the syntax of programs but to their semantics.
+
+Some of the limitations are not limitations of the input language of the compiler.
+For instance, CompCert compiles a program with functions having a variable 
+number of arguments. During the elaboration phase (before building Coq AST), 
+such functions are rewritten into functions with constant number of arguments.
+In the same way, bitfields are supported (in CompCert but not in CompCert C)
+through desuagring after parsing.
+Thus, if you generate C text files and reuse the CompCert parser, you will not
+see some of the mentionned limitations. 
+
+I do not agree with the sentence "In-line assembly is not supported". 
+Built-in functions can be used to support in-line assembly.
+
+- Page 47. Typo: remove the "textit".
+
+- Chapter 5, page 65
+The first paragraph is not clear. Write-backs have not been introduced in the document.
+Why are they important here ?
+
+- Page 72. Typo: "executing executing"
+
+- Chapter 7, page 94.
+same_cp_SR should be same_copy_sr.
+
+- Page 102. What does "evaluating expressions 2.3.2" mean ?

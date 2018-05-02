@@ -1,0 +1,197 @@
+\documentclass[a4paper,11pt]{article}
+
+\usepackage{fullpage}
+\pagestyle{empty}
+
+\usepackage{cite}
+\usepackage[pdftex]{color}
+\usepackage[pdftex]{graphicx}
+\usepackage{url}
+\usepackage{xspace}
+\usepackage{here}
+
+\usepackage{my}
+
+\makeatletter
+\def\APtitle#1{\def\@APtitle{#1}}
+\def\APauthor#1{\def\@APauthor{#1}}
+\def\APaffiliation#1{\def\@APaffiliation{#1}}
+\def\APmaketitle{%
+\clearpage\begin{center}%
+{\bfseries \LARGE \@APtitle}\\\bigskip
+{\large \@APauthor}\\\medskip
+{\@APaffiliation}\\\medskip
+\end{center}}
+\makeatother
+
+\begin{document}
+
+\APtitle{Designing a CPU model: from a pseudo-formal documentation to formal code}
+\APauthor{Fr\'ed\'eric Blanqui and Claude Helmstetter$^\dag$ and Vania Joloboff and Jean-Fran\c cois~Monin$^\ddag$ and Xiaomu Shi} % alphabetical order
+\APaffiliation{%
+FORMES project, LIAMA (CNRS, INRIA, Tsinghua University), Beijing, China\\
+$^\dag$\texttt{Claude.helmstetter@inria.fr} \\
+$^\ddag$\texttt{jean-francois.monin@imag.fr}}
+
+\APmaketitle
+
+Developing a new System-on-Chip (SoC) for some embedded systems requires the
+design of {\em abstract models}~\cite{tlm-book}. These models ease the design
+and the validation by providing a global view of the future system, allowing to
+certify protocols, simulate the embedded software, and decide the correctness of
+hardware executions.
+
+Like the real hardware, a model of a full system is organized as a set of
+components. When a system is simulated, most of the computation time is spent in
+the component modeling the processor. This component is called an {\em ISS}
+(Instruction Set Simulator). Fast simulations require to implement many
+optimizations techniques in the ISS, such as {\em dynamic
+  translation}~\cite{dyntrans}.  Even without optimizations, writing an ISS is a
+long task because functional specifications of processors are generally over
+500~pages.
+
+\hspace{1ex}
+
+In this work, we consider the ARMv6 architecture. The reference
+manual~\cite{arm6refman} of the CPU part (i.e., excluding the memory management
+part) counts 617~pages. This manual is mainly written in natural language, but
+each instruction is described by two elements that can be automatically parsed:
+\begin{itemize}
+\item a table describing the instruction binary encoding
+\item a piece of {\em pseudo-code} describing its behavior.
+\end{itemize}
+
+Starting from this reference manual, we provide a tool chain that: 1. extracts
+and parses the pseudo-formal parts, 2a. generates a formal specification of the
+ARMv6 CPU in Coq~\cite{coq}, which can be used to conduct proofs, 2b. generates
+a C/C++ ISS suitable for fast simulations. Fig.~\ref{fig:archi} describes the overall
+architecture. The Coq specification is similar to the HOL specification of the
+ARMv7 architecture presented in~\cite{FoxM10}, excepted that our Coq
+specification is mainly automatically generated.
+
+\hspace{1ex}
+
+The Coq specification provides a {\tt step} function that simulates one step a
+CPU execution, including the three phases: fetch, decode, and execute. Both the
+decoder and the execute function of each instruction is generated.  The
+instruction operation is defined in Coq with monadic
+specifications~\cite{wadjfp09}, in order to express changes of internal states
+in a readable way and to facilitate the reasoning on the intermediate
+computations.
+The Coq-code generator is 9000~words-of-code long (OCaml), and it
+generates 31000~words of Coq (as measured with \verb|wc -w|, which is less
+dependent on the coding-style than \verb|wc -l|). Additionally, there are
+9000~words of hand-written code corresponding to the functions and types that
+are described only in natural language.
+
+\hspace{1ex}
+
+A simulator can be extracted from the Coq specification using existing tools,
+but it does not provide a sufficient simulation speed (less than 1000
+instructions per second).  That is why we also generate a fast C/C++ ISS, which
+implements dynamic translation. Dynamic translation means that the result of the
+decoder is stored, to avoid the decoding time if the same instruction is
+executed again. An instruction can be stored as a C struct, or compiled to
+native code.  The compilation to native code is done using the LLVM runtime
+compiler~\cite{llvm}, and only for blocks which are executed very often.
+
+Before code generation, several transformations
+and analysis are applied to the OCaml internal representation.
+\begin{itemize}
+\item Some instructions are described in two parts: the instruction body and the
+  addressing mode. Generating efficient code requires to {\em flatten} the
+  description by inlining the pseudo-code of the addressing mode and merging the
+  encoding tables.
+\item Most ARM instructions have a condition field, which is evaluated before
+  executing the instruction itself. However, the condition is often {\em
+    ``Always''}, thus the condition check is useless. For each conditional
+  instruction, we derive an unconditional variant by {\em specialization}.
+\item As an instruction is generally decoded once and executed a lot of times,
+  sub-expressions that depend only upon the instruction parameters are moved from
+  the execute function to the decoder. Thus, the sub-expression
+  \verb|NumberOfSetBitsIn(register_list)*4| is replaced by a new parameter
+  \verb|nb_reg_x4|, which is computed at decode-time.
+\item Compiling to native code requires to recognize the {\em basic blocks}
+  (i.e., a sequence of instructions always executed in a row). An instruction is
+  a basic-clock terminator if it {\em may branch} for some states of the
+  processor. Some particular instructions are managed manually, but the
+  may-branch condition (such as $Rd = PC$) is computed automatically for most
+  instructions.
+\end{itemize}
+
+After these transformations, the generator generates three different modules:
+the binary decoder, the execute functions that simulate each instructions
+and an additional runtime helper module used in the LLVM translation.
+
+% Figure placed by hand, using the "here" package
+\begin{figure}[H]
+\centering
+\scalebox{.5}{\insertfig{archi}}
+\caption{Overall Architecture}
+\label{fig:archi}
+\end{figure}
+
+% \hspace{1ex}
+\clearpage
+
+The generated ISS can be executed with a minimal C wrapper, at the cost of
+limited features. This stand-alone simulator can be a target for certification
+work, using tool such as Frama-C and Why~\cite{filliatre07cav,frama-c}.
+
+To allow full system simulation, we integrated our ISS in a SystemC/TLM module,
+and added this module to the open-source SimSoC project~\cite{ossc09}. The new
+ISS passes all the tests written to validate the previous ARMv5 ISS of SimSoC
+(thanks to backward compatibility). In particular, the new ARMv6 ISS can
+simulate Linux running on two boards based on the ARMv5 architecture (the
+SPEArPlus600 from STMicroelectronics and the TI AM1707 from Texas
+Instrument). Without the compilation to native code, which is still
+experimental, the automatically generated ARMv6 ISS is as fast as the previous
+hand-written ARMv5 ISS, and it will be included in the next release of SimSoC.
+
+% TODO: ?
+% Note on patches: *pseudo* (CarryFrom) + ARM ARM bugs (CLZ, LDRBT) + important
+% English comments. Looks like they are fixed in ARMv7 documentation.
+
+% TODO: ?
+% Ongoing and further work: certification, test generation. % (if enough space)
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\bibliographystyle{alpha}
+\bibliography{abstract}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Sample 1
+% \APtitle{\LaTeX Template for Poster Submission\\ to APLAS 2010}
+% \APauthor{Kiminori Matsuzaki}
+% \APaffiliation{%
+% Graduate School of Information Science and Technology, \\
+% University of Tokyo, Japan\\
+% \texttt{kmatsu@ipl.t.u-tokyo.ac.jp}}
+
+% \APmaketitle
+
+% This is a \LaTeX template for the poster submission to APLAS 2010.
+% Each presenter should e-mail a  1-2 page abstract  in PDF or
+% PostScript (including the title, authors, affiliations, and a
+% summary of the work).
+
+%% End of Sample 1
+
+%% Sample 2
+% \APtitle{\LaTeX Template for Poster Submission\\ to APLAS 2010:
+% Sample 2} \APauthor{Kiminori Matsuzaki$^\dag$ and Zhenjiang
+% Hu$^\ddag$}
+% \APaffiliation{%
+% $^\dag$Graduate School of Information Science and Technology, \\
+% University of Tokyo, Japan\\
+% \texttt{kmatsu@ipl.t.u-tokyo.ac.jp}\\
+% \medskip
+% $^\ddag$National Institute of Informatics, Japan\\
+% \texttt{xxx@yyy.zzz}}
+
+% \APmaketitle
+
+% This is a sample for two authors with difference affiliations.
+%% End of Sample 2
+
+\end{document}

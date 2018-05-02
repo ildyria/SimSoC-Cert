@@ -1,0 +1,239 @@
+
+\chapter{Tests generator for the decoder}%{Other facilities}
+\label{cpt:other}
+% \jf{%
+% Main idea:
+% From each instruction I, decode I, generate an assembly instruction in txt,
+% then using ARM assembly program, generate the binary gain,
+% then check that the result is identical to the I.
+% \\%
+% Only $4.10^9$ instructions.
+% Simsoc speed = $10^8$ instructions/s.
+% Wrong (depends on decoding speed of Simsoc), to be completed by Vania
+% Then finished in 40 s.
+% \\%
+% Not done for all $4.10^9$ cases but for all instructions
+% in all their different modes.
+% \\%
+% Show some code resulting form the tools.
+% }
+
+Currently we do not have a correctness proof of our ARM instruction decoder.
+Instead, we have built a decoder tests generator,
+which can help to check the coverage and
+correctness of the generated C decoder.
+% which takes the instruction encoding tables and restrictions of having
+% legal instruction as input and produces binary instruction
+
+
+\selectlanguage{french}
+\section*{Résumé}
+
+\begin{resume}
+Actuellement, nous n'avaons pas développé de preuve de correction
+pour notre décodeur d'instructions ARM intégré à \simlight.
+À la place, nous avons construit un générateur de tests pour ce décodeur,
+permettant de tester sa couverture et de vérifier qu'il produit
+des résultats corrects.
+\end{resume}
+
+\selectlanguage{english}
+\bigskip
+
+%\section
+
+%\hide{
+\begin{figure*}
+\centering\footnotesize
+\begin{tabular}{|c|c|c|c|c|c|c|c|c|c|}
+\multicolumn{10}{c}{\small\em (a) binary encoding of the {\stt ADC} instruction}\\
+\hline
+31 $\ldots$ 28 & 27 26 & 25 & 24 \dotfill 21 & 20 & 19 $\ldots$ 16 & 15 $\ldots$ 12 & \multicolumn{3}{c|}{11 \dotfill 0} \\\hline
+\stt cond & \stt 0~0 & \stt I & \stt 0~1~0~1 & \stt S & \stt Rn & \stt Rd & \multicolumn{3}{c|}{\stt shifter\_operand} \\
+\hline
+% \multicolumn{10}{c}{~}\\
+\multicolumn{10}{c}{\small\em \phantom{\LARGE I}(b) binary encoding of the ``logical shift left by immediate'' operand\phantom{\LARGE I}}\\
+\hline
+31 $\ldots$ 28 & 27 26 & 25 & 24 \dotfill 21 & 20 & 19 $\ldots$ 16 & 15 $\ldots$ 12 & 11 \dotfill 7 & 6 $\ldots$ 4 & 3 $\ldots$ 0 \\\hline
+\stt cond & \stt 0~0 & \stt 0 & \stt opcode & \stt S & \stt Rn & \stt Rd & \stt shift\_imm & \stt 0~0~0 & \stt Rm \\
+\hline
+% \multicolumn{10}{c}{~}\\
+\multicolumn{10}{c}{\small\em \phantom{\LARGE I}(a+b) resulting binary encoding of the flattened instruction\phantom{\LARGE I}}\\
+\hline
+31 $\ldots$ 28 & 27 26 & 25 & 24 \dotfill 21 & 20 & 19 $\ldots$ 16 & 15 $\ldots$ 12 & 11 \dotfill 7 & 6 $\ldots$ 4 & 3 $\ldots$ 0 \\\hline
+\stt cond & \stt 0~0 & \stt 0 & \stt 0~1~0~1 & \stt S & \stt Rn & \stt Rd & \stt shift\_imm & \stt 0~0~0 & \stt Rm \\
+\hline
+\end{tabular}
+\end{figure*}
+%}
+
+In order to validate the generated C decoder, we have built an
+automatic test generator that generates all possible instructions
+excluding undefined and unpredictable ones.  We generate two kind of
+files. The first file contains the test instructions binary encoding
+in the ELF format. The second file contains the same instructions in the same
+order in assembly code.
+
+The decoder has been included in a program that generates, for each
+instruction from the binary file, the assembly language of that
+decoded instruction. The second generated file can then be compared
+with that decoding result: the two files should be identical.
+
+The parameter values are chosen with respect to the validity constraints to
+ensure that the instruction is defined and predictable.
+For example, the parameters of the {\stt ADC} instruction (see
+Fig.~\ref{fig:flatten}) are {\stt Rd}, {\stt Rn}, and {\stt shift\_imm}.
+Binary instructions are produced with different combinations of values for them.
+From reading the \texttt{Syntax} and \texttt{Usage} part of each instruction,
+we know there are several validity constraints for some instructions.
+Some validity constraints are dealt with during the parameter generation.
+For example, register {\stt Rn} in instruction {\stt LDRBT} cannot be
+{\stt PC} ({\stt R15}).
+Hence the test chooses directly values between 0 and 14 to be assigned to {\stt Rn}.
+Some other validity constraints involve two or more
+parameters at the same time.
+Continuing the example of {\stt LDRBT}, another constraint states
+that {\stt Rd} and {\stt Rn} must be different:
+the generator must produce two different values
+and assign them to {\stt Rd} and {\stt Rn}.
+Similarly, we generate the corresponding assembly code. Under each encoding
+table in the reference manual, the \texttt{Syntax} part explains the syntax
+of the instruction, the instruction identifier, and the same parameters as in
+the encoding table.
+The contents of the generated files are shown in Figure~\ref{table:dectest}.
+The left column is a group of binary test in hexadecimal format,
+which are legal instantiation of \adc instruction.
+The right column is their corresponding assembler code according to
+the syntax:
+$$\texttt{ADC\{<cond>\}\{S\} <Rd>, <Rn>, <shifter\_operand>}$$
+They represent one group of \adc with under different combination of
+condition of execution and the value of the S bit.
+
+    % 8000:	d2a063ac 	adcle	r6, r0, #-1342177278	; 0xb0000002
+    % 8004:	80ab3000 	adchi	r3, fp, r0
+    % 8008:	80b0dd8f 	adcshi	sp, r0, pc, lsl #27
+    % 800c:	b0b30618 	adcslt	r0, r3, r8, lsl r6
+    % 8010:	80bb0da0 	adcshi	r0, fp, r0, lsr #27
+    % 8014:	c0bedd31 	adcsgt	sp, lr, r1, lsr sp
+    % 8018:	00a157ca 	adceq	r5, r1, sl, asr #15
+    % 801c:	80b05251 	adcshi	r5, r0, r1, asr r2
+    % 8020:	c0ad3268 	adcgt	r3, sp, r8, ror #4
+    % 8024:	00b55574 	adcseq	r5, r5, r4, ror r5
+    % 8028:	a0ad806e 	adcge	r8, sp, lr, rrx
+\begin{table}[h]
+  \centering
+  \begin{tabular}{|l|l@{~}|}
+    \hline
+    binary tests & asm tests\\
+    \hline
+    52a063ac & ADCLE	R6, R0, \#0xb0000002\\
+    80ab3000 & ADCHI	R3, R11, R0\\
+    80b0dd8f & ADCHIS	SP, R0, PC, LSL \#27\\
+    b0b30618 & ADCLTS	R0, R3, R8, LSL R6\\
+    80bb0da0 & ADCHIS	R0, R11, R0, LSR \#27\\
+    c0bedd31 & ADCGTS	SP, LR, R1, LSR SP\\
+    00a157ca & ADCEQ	R5, R1, R10, ASR \#15\\
+    80b05251 & ADCHIS	R5, R0, R1, ASR R2\\
+    c0ad3268 & ADCGT	R3, SP, R8, ROR \#4\\
+    00b55574 & ADCEQS	R5, R5, R4, ROR R5\\
+    a0ad806e & ADCGE	R8, SP, LR, RRX\\
+    \hline
+  \end{tabular}
+  \caption{Generated tests for C decoder}
+  \label{table:dectest}
+\end{table}
+
+We use the generated binary instruction as input for our decoder.
+It outputs the result in assembly code.
+Then using the Unix command {\stt diff}, we can compare the decoder
+results and the assembly tests.
+Several minor issues have been detected and fixed in this way.
+
+
+% % JF moved to chapt "formal"
+% \section{Experimental result and validation}
+% \label{ssc:vali}
+
+% With the functional defined semantics, it is possible to extract the whole Coq
+% specified ARMv6 simulator into OCaml code and compile it to an executable
+% binary. And it is also interesting to see tests running on a formal specified
+% simulator.
+% We provide the tests for the C specified Simlight.
+% In the mean time, we use these tests for our formal specification.
+% On one side, we use the {\stt arm-elf-gcc} compiler to
+% compile the C tests into ELF files to be used in Simlight.
+% On the other side, we write an easy translator
+% then to translate the tests to Coq representation
+% and then extract to ML files.
+% These small tests can be executed on the formal simulator in a sufficient
+% simulation speed, less than 1000 instructions per second.
+% Running a simple direct sum test takes around five minutes.
+% A sorting program would then need one day to be completed.
+% % % JF -> XM : should be much less, no? anyway no need to state anything.
+% % wheras the correponding C code only needs 0.78 seconds.
+% However, we are
+% For such formal specification, we do not care the execution speed,
+% which aims to perform formal proofs for the simulation correctness.
+
+% The validation result of the C side is worth to mention.
+% In SimSoC, there is already an ISS for ARMv5 architecture and corresponding
+% tests exist. Thanks to backward compatibility, all these tests can be reused
+% on new ARMv6 ISS. And the new ARMv6 ISS can pass these tests and new written
+% tests for ARMv6 new instructions.
+% % compare with ARMv5 (backward compatibility)
+% % use 10 elf files and 3 computers.
+% We measure the speed of the generated ARMv6 ISS and hand-written ARMv5 ISS to
+% make comparison. We expect that the new ARMv6 ISS is competitve to the existing
+% one for v5. And we cannot measure with the compilation to native code because
+% it is not available in old ARMv5 ISS.
+% We select three benchmarks ``loop'', ``sorting'', and ``crypto'' and
+% run them first with optimization (-O3) then without (-O0) on three different
+% computers:
+% a 32-bit Linux, a 64-bit Linux, and a 64-bit MacBook. The result is shown in
+% table~\ref{t:speed}.
+% Generally, we can conclude that the two ISSes are runing at the same speed.
+% However, the new ISS performs better on 64-bit machine.
+% So we gain not only development cost but also an even better performance.
+
+% %\hide{
+% \begin{table}\centering
+% \begin{tabular}{l|l|rr|r}
+% % \cline{3-4}
+% \multicolumn{2}{l|}{~} & \multicolumn{2}{|c|}{ARMv6} & \multicolumn{1}{c}{ARMv5} \\
+% \multicolumn{2}{l|}{~} & \multicolumn{2}{|c|}{generated ISS} & \multicolumn{1}{c}{hand-written} \\
+% \multicolumn{2}{l|}{~} & \multicolumn{2}{|c|}{speed and relative gain} & \multicolumn{1}{c}{speed} \\\hline
+% \multirow{3}{*}{arm32-crypto-O0}  & Linux 64  & 104.78 Mi/s\hspace*{-2.5mm} & +2.6\% & 102.16 Mi/s \\
+%                                   & MacOSX    & 89.08 Mi/s\hspace*{-2.5mm}  & +7.4\% & 82.98 Mi/s  \\
+%                                   & Linux 32  & 76.74 Mi/s\hspace*{-2.5mm}  &\hspace*{-2.5mm}-10.8\% & 86.03 Mi/s  \\\hline
+
+% \multirow{3}{*}{arm32-crypto-O3}  & Linux 64  & 89.97 Mi/s\hspace*{-2.5mm}  & +2.4\% & 87.89 Mi/s  \\
+%                                   & MacOSX    & 74.65 Mi/s\hspace*{-2.5mm}  & +4.6\% & 71.39 Mi/s  \\
+%                                   & Linux 32  & 70.91 Mi/s\hspace*{-2.5mm}  & -5.1\% & 74.70 Mi/s  \\\hline
+
+% \multirow{3}{*}{arm32-loop}       & Linux 64  & 124.85 Mi/s\hspace*{-2.5mm} & -1.2\% & 126.38 Mi/s \\
+%                                   & MacOSX    & 108.50 Mi/s\hspace*{-2.5mm} & +1.9\% & 106.52 Mi/s \\
+%                                   & Linux 32  & 88.89 Mi/s\hspace*{-2.5mm}  & -5.8\% & 94.39 Mi/s  \\\hline
+
+% \multirow{3}{*}{arm32-sorting-O0} & Linux 64  & 82.18 Mi/s\hspace*{-2.5mm}  & -0.5\% & 82.61 Mi/s  \\
+%                                   & MacOSX    & 74.40 Mi/s\hspace*{-2.5mm}  & +8.6\% & 68.49 Mi/s  \\
+%                                   & Linux 32  & 62.42 Mi/s\hspace*{-2.5mm}  &\hspace*{-2.5mm}-11.3\% & 70.37 Mi/s  \\\hline
+
+% \multirow{3}{*}{arm32-sorting-O3} & Linux 64  & 106.41 Mi/s\hspace*{-2.5mm} & -1.0\% & 107.54 Mi/s \\
+%                                   & MacOSX    & 97.51 Mi/s\hspace*{-2.5mm}  & +5.6\% & 92.35 Mi/s  \\
+%                                   & Linux 32  & 83.39 Mi/s\hspace*{-2.5mm}  & -1.0\% & 84.27 Mi/s  \\\hline
+
+% \multirow{3}{*}{\em average}      & Linux 64  & 107.26 Mi/s\hspace*{-2.5mm} & +4.1\% & 103.00 Mi/s \\
+%                                   & MacOSX    &  92.24 Mi/s\hspace*{-2.5mm} & +4.5\% &  88.27 Mi/s \\
+%                                   & Linux 32  &  77.90 Mi/s\hspace*{-2.5mm} & -6.8\% &  83.54 Mi/s \\\hline
+
+% \multicolumn{2}{l|}{\em global average}       &  92.47 Mi/s\hspace*{-2.5mm} & +0.9\% &  91.60 Mi/s \\
+% \end{tabular}
+% \caption{Comparison of the simulation speeds}
+% \label{t:speed}
+% \end{table}
+
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "thesis"
+%%% End:

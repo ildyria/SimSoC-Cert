@@ -1,0 +1,269 @@
+---------------------------------------------------------------------------------------
+                  Reviewer: 917861211         Expertise level: high
+---------------------------------------------------------------------------------------
+Submission Title:
+SimSoC-CERT: a Certified Simulator for Systems on Chip
+
+Overall Value (can be different from average): 1
+(n.a. = not applicable, 1 = extremely poor, 5 = outstanding)
+
+In conference scope: y
+
+Presentation (n.a. = not applicable, 1 = extremely poor, 5 = outstanding):
+Accurancy of title: 3
+Clarity of abstract: 3
+Problem clearly defined: 3
+Methods, algorithms, and proofs clearly described: 3
+Experiments and results clearly described: 3
+Clarity of tables and figures: 2
+Overall Presentation (can be different from average): 3
+
+Contents (n.a. = not applicable, 1 = extremely poor, 5 = outstanding):
+Novelty of solution: 1
+Thoroughness and depth of theory: 2
+Hardness of experimental evidence: 3
+Account of prior work (references): 2
+Overall Content (can be different from average): 1
+
+Comments for authors, suggestions for improvements:
+The paper presents an attempt to formally prove the correct implementation
+
+of a piece of the SimSoC simulator.
+
+According with the authors, this paper is not a completed work, but just a
+
+first step.
+
+
+
+The objective of proving the correctness of a simulator is always a good result,
+
+since it allows users to adopt the simulator in projects oriented in
+
+safety-critical scenarios.
+
+
+
+Unfortunately, even if this effort is very huge and useful in practice, it is not
+
+a research or innovation work per se.
+
+It becomes a research work only when the adopted techniques are innovative,
+
+addressing common or hard problems, and they can be reused in similar contexts.
+
+
+
+This paper does not address any innovation, but it is just a mere verification.
+
+Morvoer, the verification has been not completed, and the work results ongoing.
+
+
+
+The English use is sometimes not suited for a scientific paper.
+
+Some clean up is required.
+
+
+
+Thus, reviewer final opinion is that before publication, the work should be
+
+completed,
+
+and the paper should be rewritten, pointing out the innovative ideas and the
+
+techniques
+
+that have general validities.
+
+
+
+
+
+MINOR ISSUES
+
+
+
+- Related Work: usually it is put merged in the introduction, or in a stand
+
+alone section.
+
+ Not in a hybrid way like in this paper.
+
+- Section 2: and words tuples --> and words as tuples
+
+- Section 2: there is no need of a subsection, since there are not other
+
+subsections.
+
+---------------------------------------------------------------------------------------
+                  Reviewer: 4369969         Expertise level: high
+---------------------------------------------------------------------------------------
+Submission Title:
+SimSoC-CERT: a Certified Simulator for Systems on Chip
+
+Overall Value (can be different from average): 2
+(n.a. = not applicable, 1 = extremely poor, 5 = outstanding)
+
+In conference scope: y
+
+Presentation (n.a. = not applicable, 1 = extremely poor, 5 = outstanding):
+Accurancy of title: 3
+Clarity of abstract: 3
+Problem clearly defined: 3
+Methods, algorithms, and proofs clearly described: 3
+Experiments and results clearly described: 2
+Clarity of tables and figures: 3
+Overall Presentation (can be different from average): 3
+
+Contents (n.a. = not applicable, 1 = extremely poor, 5 = outstanding):
+Novelty of solution: 2
+Thoroughness and depth of theory: 2
+Hardness of experimental evidence: 2
+Account of prior work (references): 3
+Overall Content (can be different from average): 2
+
+Comments for authors, suggestions for improvements:
+ The paper proposes a methodology to develop formal models of microprocessor
+
+architectures. There are some previous works (for example reference [9])
+
+that provides this type of formalizations. The main innovations of the paper
+
+seem to be:
+
+* It formalizes a different ARM architecture.
+
+* A different formal framework is used.
+
+* The reference-pseudo code is automatically translated to the formal
+
+framework (in [9] this process is manual).
+
+
+
+Thus, the paper novelty is limited.
+
+
+
+---------------------------------------------------------------------------------------
+                  Reviewer: 7569909         Expertise level: medium
+---------------------------------------------------------------------------------------
+Submission Title:
+SimSoC-CERT: a Certified Simulator for Systems on Chip
+
+Overall Value (can be different from average): 2
+(n.a. = not applicable, 1 = extremely poor, 5 = outstanding)
+
+In conference scope: y
+
+Presentation (n.a. = not applicable, 1 = extremely poor, 5 = outstanding):
+Accurancy of title: 3
+Clarity of abstract: 3
+Problem clearly defined: 3
+Methods, algorithms, and proofs clearly described: 2
+Experiments and results clearly described: 2
+Clarity of tables and figures: 2
+Overall Presentation (can be different from average): 3
+
+Contents (n.a. = not applicable, 1 = extremely poor, 5 = outstanding):
+Novelty of solution: 2
+Thoroughness and depth of theory: 1
+Hardness of experimental evidence: 2
+Account of prior work (references): 1
+Overall Content (can be different from average): 2
+
+Comments for authors, suggestions for improvements:
+The authors propose to validate the instruction set simulator.  They
+
+propose to use a theorem prover, Coq.  However, later the in the short
+
+4-page paper, the authors talked about test generation that generates
+
+binary vectors.  It's not clear how the theorem prover and the test
+
+generator are related.  How is the proposed method complete?  There are
+
+many such loop-holes that leaves the paper very vague in what the
+
+authors plan to do.
+
+
+
+There were numerous typos and grammatical errors throughout the paper.
+
+---------------------------------------------------------------------------------------
+                  Reviewer: 4019969         Expertise level: low
+---------------------------------------------------------------------------------------
+Paper Title:
+SimSoC-CERT: a Certified Simulator for Systems on Chip
+
+Overall Value (can be different from average): 5
+(n.a. = not applicable, 1 = extremely poor, 5 = outstanding)
+
+In conference scope: y
+
+Presentation (n.a. = not applicable, 1 = extremely poor, 5 = outstanding):
+Accurancy of title: 4
+Clarity of abstract: 4
+Problem clearly defined: 4
+Design/methodology clearly described: 4
+Experiments and results clearly described: 4
+Clarity of tables and figures: echo 4
+Overall Presentation (can be different from average): 4
+
+Contents (n.a. = not applicable, 1 = extremely poor, 5 = outstanding):
+Industrial potential of design/methodology: 5
+Thoroughness of description: 5
+Hardness of experimental evidence: 3
+Overall Content (can be different from average): 5
+
+Comments for authors, suggestions for improvements:
+     I have no suggestions for improvement in this paper.
+
+---------------------------------------------------------------------------------------
+                  Reviewer: 1239929         Expertise level: medium
+---------------------------------------------------------------------------------------
+Paper Title:
+SimSoC-CERT: a Certified Simulator for Systems on Chip
+
+Overall Value (can be different from average): 3
+(n.a. = not applicable, 1 = extremely poor, 5 = outstanding)
+
+In conference scope: y
+
+Presentation (n.a. = not applicable, 1 = extremely poor, 5 = outstanding):
+Accurancy of title: 3
+Clarity of abstract: 4
+Problem clearly defined: 3
+Design/methodology clearly described: 3
+Experiments and results clearly described: n.a.
+Clarity of tables and figures: echo 4
+Overall Presentation (can be different from average): 3
+
+Contents (n.a. = not applicable, 1 = extremely poor, 5 = outstanding):
+Industrial potential of design/methodology: 4
+Thoroughness of description: 3
+Hardness of experimental evidence: n.a.
+Overall Content (can be different from average): 3
+
+Comments for authors, suggestions for improvements:
+This paper describes the efforts of the authors to formally prove the
+
+correctness of a n SoC simulator, SimSoC.
+
+
+
+This paper might become a good case study, but right now it is not complete.
+
+There are no results. There are also no stated properties which have been
+
+checked, or theorems which have been proven.
+
+
+
+Section III.E. is confusing because it introduces test generation, but the
+
+paper is stated to be about formal verification. How are the tests and the
+
+formal methods used together?

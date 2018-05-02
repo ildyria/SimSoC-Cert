@@ -1,0 +1,219 @@
+%\documentclass[runningheads]{llncs}
+\documentclass{llncs}
+%\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{amssymb}
+\usepackage{dsfont}
+\usepackage{amsmath} 
+
+\usepackage{url}
+\usepackage{cancel}
+\usepackage{verbatim}
+\usepackage{alltt}
+\usepackage{graphicx}
+\usepackage{prooftree}
+
+\usepackage{latexsym}
+\usepackage{xspace}
+%\usepackage{draft} REVOIR
+\usepackage{comment}
+%\usepackage{ntheorem}
+%\usepackage{amsthm} % \proof seems to exist in llncs
+
+\newcommand{\revoir}[1]{\mbox{{[*** {\bfseries\large #1} ***]}}}
+\newcommand{\nouveau}[1]{\textcolor{blue}{#1}}
+
+\newcommand{\egdef}%
+   {\ensuremath{\:\mathrel{\raisebox{-.7ex}%
+   {$\stackrel{\rm def}{=\mkern-8mu=}$}}\:}}
+
+\newcommand{\simlight}{\texttt{simlight}\xspace}
+
+\newtheorem{Prog}{Program}
+%\newcommand{\idcoq}[1]{\texttt{#1}}
+\newcommand{\idcoq}[1]{\ensuremath{\mathit{#1}}}
+\newcommand{\impl}{\ensuremath{\Rightarrow}}
+\newcommand{\flequiv}{\ensuremath{\leftrightarrow}}
+\newcommand{\todo}[1]{\textcolor{blue}{\textsc{[#1]}}}
+\newcommand{\XM}[1]{{\color{red} #1}} % Xiaomu's editing
+\newcommand{\JFM}[1]{{\color{red} #1}} % JF's editing
+
+% BEGIN For coqdoc 
+
+\newenvironment{coqdoccode}{}{}
+
+\newlength{\coqdocbaseindent}
+\setlength{\coqdocbaseindent}{0em}
+
+\newcommand{\coqdef}[3]{#3}
+\newcommand{\coqref}[2]{#2}
+\newcommand{\coqexternalref}[3]{#3}
+
+% Beginning of a line without any Coq indentation
+\newcommand{\coqdocnoindent}{\noindent\kern\coqdocbaseindent}
+% Beginning of a line with a given Coq indentation
+\newcommand{\coqdocindent}[1]{\noindent\kern\coqdocbaseindent\noindent\kern#1}
+% End-of-the-line
+\newcommand{\coqdoceol}{\hspace*{\fill}\setlength\parskip{0pt}\par}
+% Empty lines (in code only)
+\newcommand{\coqdocemptyline}{\vskip 0.4em plus 0.1em minus 0.1em}
+
+% own name
+\newcommand{\coqdoc}{\textsf{coqdoc}}
+
+% pretty underscores (the package fontenc causes ugly underscores)
+%BEGIN LATEX
+\def\_{\kern.08em\vbox{\hrule width.35em height.6pt}\kern.08em}
+%END LATEX
+
+% macro for typesetting keywords
+\newcommand{\coqdockw}[1]{\texttt{#1}}
+
+% macro for typesetting variable identifiers
+\newcommand{\coqdocvar}[1]{\textit{#1}}
+
+% macro for typesetting constant identifiers
+\newcommand{\coqdoccst}[1]{\textsf{#1}}
+
+% macro for typesetting module identifiers
+\newcommand{\coqdocmod}[1]{\textsc{\textsf{#1}}}
+
+% macro for typesetting module constant identifiers (e.g. Parameters in
+% module types)
+\newcommand{\coqdocax}[1]{\textsl{\textsf{#1}}}
+
+% macro for typesetting inductive type identifiers
+\newcommand{\coqdocind}[1]{\textbf{\textsf{#1}}}
+
+% macro for typesetting constructor identifiers
+\newcommand{\coqdocconstr}[1]{\textsf{#1}}
+
+% macro for typesetting tactic identifiers
+\newcommand{\coqdoctac}[1]{\texttt{#1}}
+
+% These are the real macros used by coqdoc, their typesetting is 
+% based on the above macros by default.
+
+\newcommand{\coqdoclibrary}[1]{\coqdoccst{#1}}
+\newcommand{\coqdocinductive}[1]{\coqdocind{#1}}
+\newcommand{\coqdocdefinition}[1]{\coqdoccst{#1}}
+\newcommand{\coqdocvariable}[1]{\coqdocvar{#1}}
+\newcommand{\coqdocconstructor}[1]{\coqdocconstr{#1}}
+\newcommand{\coqdoclemma}[1]{\coqdoccst{#1}}
+\newcommand{\coqdocclass}[1]{\coqdocind{#1}}
+\newcommand{\coqdocinstance}[1]{\coqdoccst{#1}}
+\newcommand{\coqdocmethod}[1]{\coqdoccst{#1}}
+\newcommand{\coqdocabbreviation}[1]{\coqdoccst{#1}}
+\newcommand{\coqdocrecord}[1]{\coqdocind{#1}}
+\newcommand{\coqdocprojection}[1]{\coqdoccst{#1}}
+\newcommand{\coqdocnotation}[1]{\coqdockw{#1}}
+\newcommand{\coqdocsection}[1]{\coqdoccst{#1}}
+\newcommand{\coqdocaxiom}[1]{\coqdocax{#1}}
+\newcommand{\coqdocmodule}[1]{\coqdocmod{#1}}
+
+% END For coqdoc 
+
+% macros for this paper
+\newcommand{\diag}{\coqdocvar{diag}\xspace}
+\newcommand{\inversion}{\coqdoctac{inversion}\xspace}
+\newcommand{\inv}{\coqdoctac{inv}\xspace}
+\newcommand{\casetac}{\coqdoctac{case}\xspace}
+\newcommand{\match}{\coqdoctac{match}\xspace}
+\newcommand{\with}{\coqdoctac{with}\xspace}
+\newcommand{\intac}{\coqdoctac{in}\xspace}
+\newcommand{\retac}{\coqdoctac{return}\xspace}
+\newcommand{\refine}{\coqdoctac{refine}\xspace}
+\newcommand{\Prop}{\coqdockw{Prop}\xspace}
+\newcommand{\True}{\coqdocvar{True}\xspace}
+\newcommand{\eveni}{\coqdocvar{even\_i}\xspace}
+\newcommand{\EZ}{\coqdocvar{E0}\xspace}
+\newcommand{\ET}{\coqdocvar{E2}\xspace}
+\newcommand{\evenf}{\coqdocvar{even\_f}\xspace}
+\newcommand{\prone}{\coqdocvar{pr\_1}\xspace}
+\newcommand{\prET}{\coqdocvar{premises\_E2}\xspace}
+\newcommand{\EXPR}{\coqdocvar{EXPR}\xspace}
+\newcommand{\PROOFEV}{\coqdocvar{PROOF\_EV}\xspace}
+\renewcommand{\PROOFEV}{\mathit{PE}}
+
+% For automated inclusion of .tex files generated from coqdoc
+\newcommand{\coqdocinput}[1]{\input{#1}}
+
+\newcommand{\union}{\ensuremath{\cup}}
+
+\newenvironment{ml}
+  {\begin{alltt}
+   \footnotesize} %% 3.12.0
+  {\end{alltt}
+  }
+
+\newenvironment{coq}
+  {\begin{alltt}
+   \footnotesize} %% 8.3pl2 (April 2011)
+  {\end{alltt}
+  }
+
+\newenvironment{humC}
+  {\begin{alltt}
+   \footnotesize}
+  {\end{alltt}
+  }
+
+
+
+\begin{document}
+
+\title{Scaling up Small Inversions
+}
+\titlerunning{Scaling up Small Inversions}
+% Official order as registered at CPP
+\author{Jean-Fran\c{c}ois Monin\inst{1,2}
+\and 
+Xiaomu Shi\inst{1}
+}
+\institute{%
+Universit\'{e} de Grenoble 1 - LIAMA
+\and CNRS - LIAMA
+}
+\authorrunning{J.-F. Monin, X. Shi}
+
+\maketitle
+
+\begin{abstract}
+  When reasoning on formulas involving large-size inductively defined
+  relations, such as the semantics of a real programming language,
+  many steps require the inversion of a hypothesis. The built-in
+  "inversion" tactic of Coq can then be used, but it suffers from
+  severe controllability and efficiency issues.  A proof-trick called
+  small inversions by one of the co-authors provides a part of the
+  solution. It is based on a suitable diagonal auxiliary
+  predicate. However, many important practical situations are not
+  covered by this technique.  We present here an improvement inspired
+  by the impredicative encoding of inductive data-structures. Our
+  experiments in the SimSoC-Cert project show that this technique
+  successfully scales up to proofs of non-trivial programs according
+  to the operational semantics of C as defined in Compcert.
+\end{abstract}
+
+
+
+%-------------------------------------------------------------------------
+\input{introduction}
+\input{sminv-absurd}
+\input{improvement}
+\input{simsoc-cert}
+\input{conclusion}
+
+
+\bibliographystyle{abbrv}
+\bibliography{biblio}
+
+\end{document}
+
+
+%-------------------------------------------------------------------------
+
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "cpp12"
+%%% End: 

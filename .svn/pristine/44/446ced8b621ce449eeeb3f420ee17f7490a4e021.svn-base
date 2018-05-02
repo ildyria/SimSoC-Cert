@@ -1,0 +1,12 @@
+#!/bin/bash
+
+mainwork=itp13
+filesub=itp13_submission
+
+sed -e '/input{working}/s/^/% /' -e '/input{submission}/s/^%//' $mainwork.tex > $filesub.tex
+
+pdflatex $filesub
+bibtex $filesub
+pdflatex $filesub
+pdflatex $filesub
+rm -f $filesub.blg $filesub.toc $filesub.aux $filesub.out $filesub.bbl $filesub.log

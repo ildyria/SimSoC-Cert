@@ -1,0 +1,428 @@
+% \hide{
+%    In general, patch functions are in sl2_patch.ml, and generation
+%    functions are in this file.
+   
+%    At the beginning, we have one list of progs (cf ast.ml) and another list of
+%    coding tables (cf codetype.ml). There is a third list describing the ASM
+%    syntax (cf syntaxtype.ml). Each list item describes either an instruction or
+%    an addressing mode case.
+   
+%    - MSR is splitted in MSRreg and MSRimm (cf file norm.ml)
+%    - the pseudo-code is normalized (cf file norm.ml)
+%    - the address write-back is disabled in the M2, M3, and M4 addressing modes
+%    - the 3-uplets <instruction, addressing mode case, syntax> are flattened
+%    (cf file flatten.ml)
+%      o during flattening, some patches are applied:
+%        patch_W, patch_SRS, patch SRS_RFE
+
+%    From this point, we manipulate "flat programs" (cf flatten.ml). The
+%    notion of addressing mode has disappeared.
+
+%    - We remove the Thumb instruction MOV(3), because it is identical to CPY
+%    - Where possible, we swap the conjunctions so that the CP15 U bit is tested
+%      after the alignment. This is an optimization try, maybe useless.
+%    - We improve the instructions that use the coprocessor
+%      (+ disable LDC and STC).
+%    - We fix a problem about "address of next instruction".
+%    - We compute the list of parameters and variables used by the pseudo-code
+%    - We replace some sub-expressions by "computed parameters"
+%    - We remove the ConditionPassed tests
+%    - We insert the writebacks at the end of the instructions
+%      (previously removed from the addressing mode cases)
+%    - We specialize the instructions for some boolean parameter values
+%    - We compute the list of instruction groups. All instructions in a group
+%      have the same list of parameters
+   
+%    From this point, we manipulate extended programs; i.e., flat program with 
+%    symbol tables.
+
+%    - We create the unconditional variants of the conditional instructions
+
+%    Now, the code generation can start.
+
+%    - We generate the instruction type and sub-types.
+%    - We generate the tables containing, among other things, the instruction
+%      names
+%    - We generate the may_branch function
+%    - We generate the 4 decoders: {thumb, arm32} x {decode_and_store,
+%      decode_and_exec} (cf sl2_decoder.ml)
+%    - We generate a small program, which is used only to control the size of the
+%      instruction type
+%    - We generate (part of) the ARM to LLVM translator
+%    - We generate the ASM printers. We need 2 versions:
+%      o one C version using fprintf and FILE*
+%      o one C++ version using streams 
+%    - We generate the semantics function (cf sl2_semantics.ml).
+%      We need 2 versions:
+%      o one version with an expanded list of atomic arguments
+%      o one version taking an SLv6_Instruction* as argument
+% }
+
+
+
+%other generated info
+
+%other hand-written specifications
+
+
+% The two main components of a processor simulator are then:
+ 
+% \begin{itemize}
+% \item
+%   The decoder, which decode from given a binary word, retrieves the
+%   name of an operation and its potential arguments in assembly code.
+%   In Section \ref{ssc:dec} we will explain how it is generated from
+%   reference manual.
+% \item
+%   The precise description of transitions is the operation of instruction.
+%   The definition contains operations on processor registers and memory，
+%   thereby the processor state is changed.
+%   In the ARMv6 reference manual, these algorithms are written in
+%   ``pseudo-code`` which calls low-level primitives. For example,
+%   some code indicates setting a range of bits of a register by a given
+%   value. And there exists operations might lead the system to undefined
+%   or forbidden situation. In ARM processor, this is called ``UNPREDICTABLE``
+%   state. When the simulator meets these result, it is then stopped with
+%   a message indicated the situation.
+%  \hide{The precise description of transformations performed by an operation
+%  on registers and memory.  In the reference manual of ARM, this is
+%  defined by an algorithm written in “pseudo-code” which calls
+%  low-level primitives for, e.g., setting a range of bits of a register
+%  to a given value.  Some situations are forbidden or left
+%  unspecified. For ARM processors, this results in a so-called
+%  ``UNPREDICTABLE`` state. The best choice, for a simulator, is then to
+%  stop with a clear indication of what happens.}
+% \end{itemize}
+
+% \subsection{Formal specification model of ARMv6}
+% \label{ssec:fsmoa}
+
+% The formal specification keep as close as the reference manual, and
+% make it as simple as possible. In this way, we can obtain a trustable
+% formal model and simple enough to reason about. Such formal model
+% contains the basic library for integer representation and binary
+% operations, memory model, main processor system control co-processor,
+% the instruction set, the simulation looper, and also files to describe
+% the initial simulation configuration.  As we explained before, except
+% the instruction set, all the other descriptions are manually
+% defined. And the bit vector definition and opertions reuse the integer
+% module from \compcert. From the \compcert integer specification, we
+% extend it to describe the 4-bit register number, 30-bit memory
+
+% Each operation O from the reference manual is mechanically translated
+% to a cor- responding Coq function named O\_Coq. First we define a type
+% state, which is a record with two fields Proc and SCC (System Control
+% Coprocessor) containing respectively the components related to the
+% main processor (status register CPSR, SPSR, other registers...) and
+% the corresponding components related to the copro- cessor, as well as
+% the ARM memory model. Then we use a monadic style [14] in order to
+% take the sequentiality of transformations on the state into
+% account. Beyond the state st, two other pieces of information are
+% handled: loc, which represent local variables of the operation and bo,
+% a Boolean indicating whether the program counter should be incremented
+% or not; they are registered in the following record which is used for
+% defining our monad:
+
+% \begin{alltt}
+% (* A4.1.2 ADC *)
+% Definition ADC_step (S : bool) (cond : opcode) (d : regnum) (n : regnum) (shifter_operand : word) : semfun _ := <s0>
+%   if_then (ConditionPassed s0 cond)
+%     ([ <st> set_reg d (add (add (reg_content s0 n) shifter_operand) ((cpsr st)[Cbit]))
+%     ; If (andb (zeq S 1) (zeq d 15))
+%        then         (<st> if_CurrentModeHasSPSR (fun em =>
+%            (<st> set_cpsr (spsr st em))))
+%        else         (if_then (zeq S 1)
+%            ([ <st> set_cpsr_bit Nbit ((reg_content st d)[n31])
+%            ; <st> set_cpsr_bit Zbit (if zeq (reg_content st d) 0 then repr 1 else repr 0)
+%            ; <st> set_cpsr_bit Cbit (CarryFrom_add3 (reg_content s0 n) shifter_operand ((cpsr st)[Cbit]))
+%            ; <st> set_cpsr_bit Vbit (OverflowFrom_add3 (reg_content s0 n) shifter_operand ((cpsr st)[Cbit])) ])) ]).
+% \end{alltt}
+
+
+% With a concrete instruction above, we explain how the formal
+% specification of a state transition functiones. Through the left line
+% of the generation chain we can machinically produce the Coq
+% specification from original operation pseudo-code~\ref{ps:adc}
+% \coqdocvar{ADC}.  Most of the instruction operations have argument
+% \coqdocvar{cond} to check the current condition. Most of the ARMv6
+% instructions can be executed conditionally, but a few executes
+% unconditionally.  For conditionally executed instruction, the
+% operation will be skipped if the condition is not fit.  The other
+% arguments are: \coqdocvar{S} is a bit indicates if the instruction
+% updates CPSR; \coqdocvar{Rn} is a register contains the first operand;
+% \coqdocvar{Rd} is the destination rigister; \coqdocvar{shift\_operand}
+% specifies the second operand, which here is the date-processing
+% operands of the first addressing mode. And if the bit$[25]$ is $0$ and
+% the bit$[7]$ and bit$[4]$ are both 1, then the instruction is no
+% longer ADC but one in the exextension of instruction set.
+
+% Note that in general, every \coqdocvar{O\_Coq}
+% functions terminate with \coqdocvar{Ok} as value. However for 
+% ``{\it UNPREDICTABLE}``
+% states for example, errors are implicitely propagated with our monadic
+% constructors for exceptions : Ko and Todo.  We present now the
+% translation of ADC pseudocode. To this effect, we intro- duce get st,
+% a monadic function giving access to the current state st in its body,
+% represented by this notation:Each operation O from the reference
+% manual is mechanically translated to a cor- responding Coq function
+% named O\_Coq. First we define a type state, which is a record with two
+% fields Proc and SCC (System Control Coprocessor) containing
+% respectively the components related to the main processor (status
+% register CPSR, SPSR, other registers...) and the corresponding
+% components related to the copro- cessor, as well as the ARM memory
+% model. Then we use a monadic style [14] in order to take the
+% sequentiality of transformations on the state into account. Beyond the
+% state st, two other pieces of information are handled: loc, which
+% represent local variables of the operation and bo, a Boolean
+% indicating whether the program counter should be incremented or not;
+% they are registered in the following record which is used for defining
+% our monad:
+
+% \hide{ Let us illustrate this on a concrete example.  Here is the
+%   original pseudo-code of the ADC (add with carry) operation of ARMv6.
+%   As most operations of ARM, this operation has an argument called
+%   cond which indicates whether the operation should be skipped or
+%   not. CPSR (Current Program Status Register) and SPSR (Saved Program
+%   Status Register, used for exception handling) are special registers
+%   related to execution modes of ARM; they also contain flags (N, Z, C
+%   and V) relevant to arithmetic instructions. The instruction has four
+%   parameters: S is a bit which specifies that the instruction updates
+%   CPSR, Rn is a register for the first operand, Rd is the destination
+%   register, shifter operand specifies the second operand according to
+%   a (rather complicated) addressing modes.  } 
+
+% The monadic function \coqdocvar{get\_st} provides method to access the current state，notated
+% as $<st>$, at any place of the operation sequences:
+
+% %Definition semfun A := semstate -> @result A.  
+% %\end{alltt}
+
+% Note that in general, every O\_Coq
+% functions terminate with Ok as value. However for “UNPREDICTABLE”
+% states for example, errors are implicitely propagated with our monadic
+% constructors for exceptions : Ko and Todo.  We present now the
+% translation of ADC pseudocode. To this effect, we intro- duce get st,
+% a monadic function giving access to the current state st in its body,
+% represented by this notation:
+
+% \begin{alltt}
+% Notation "’<’ st ’>’ A" := (\_get\_st (fun st => A))
+%   (at level 200, A at level 100, st ident).
+% \end{alltt}
+
+% \subsection{C model of ARMv6}
+% \label{ssec:sma}
+
+% The C specification continues to use the data structure for ARMv5 processor,
+% because there is nothing changed on processor character between the two version.
+% The processor state contains the most important members in the ARM model: a pointer to
+% where stores the structure representing Memory Management Unit (MMU), 
+% a status register structure for CPSR, an array for status register structure of SPSR,
+% a structure for CP15 (SCC), a field of processor id (useful when there is more than one
+% core), six array for registers of each processor mode, one field for PC, and the last
+% boolean value for \texttt{jump} which indicate whether the instruction modifies the PC.
+% In order to gain high speed for our simulator, the processor state has been designed
+% complex like this.
+% There are several fields redundanted, for example, the PC field is a pointer
+% to the 15th register in user register array. Because, the PC field is a significant
+% value to judge whether the execution is branched or not, in order to split the running
+% program into code block.
+% And the PC field will be called many times during execution.
+% This part is related to a very important optimization method
+% in \simsoc simulation ~\ref{sec:simsoc}. 
+% The processor mode is not placed as a value directly under processor state data 
+% structure. It is inside the structure for status register.
+% And there is another way to represent what is the current processor mode,
+% by looking at which register array we are using.
+% For each processor mode there is a corresponding register array.
+% This is because the simulator never use mode as a condition, it can go straight to the
+% field it want to look for to save time.
+% Contrast, the status register is not a simple 32-bit integer. It is also a data
+% structure of every significant bit of the register. The bits $[31:28]$ are the famous
+% N, Z, C, V(Negative, Zero, Carry and oVerflow) flags for condition code. 
+% These flags in the Current Program Status Register (CPSR) are tested by most of the 
+% instructions to determine wether the instruction 
+% The condition code flags in the CPSR can be tested by most instructions to
+% determine the instruction is going to be operated or skipped.
+% All the other bits are seen as the reserved or \texttt{background}.
+% Because they are reserved for future extansion and be read as zero, any written on them
+% should be ignored. For future compatibility, they must be written with the same value
+% from the same bits.
+% The generated instructions have the similar shape of the following example of ADC
+% instruction:
+
+
+% Most of the instruction begins with the condition determination by asking
+% the current condition, then a series of operations. 
+
+% To be precise, \simlight (Version 1) is in \compcert C language, the
+% large subset of C language.  Then the whole simulator is compiled
+% under the certified compiler \compcert.  In this way, the erroneous
+% from C compiler can be avoided and the compilation result is also
+% reliable.  Generating directly \compcert C code makes sure that none
+% unaccepted code has been ignored by the compiler.
+
+
+% \section{Other faclilities}
+% \subsection{Decoder}
+% \label{ssc:dec}
+% The instruction part of ARM reference manual is well structured, in which the
+% two elements can be used as the input of the automatic generation chain. The
+% first is the operation description we have introduced. The second is the 
+% instruction encoding table. It summarized all possiblility of this kind of
+% instruction 32-bit representation. All others will be decoded into unpredictable
+% or undefined.
+% Using the encoding table, it is able to build a intuitional ARM instruction
+% decoder of ARMv6 architecture.
+% The main body of the decoder is a big pattern match. Each constructor
+% represents by 32 bits, either implicit or explicit.
+% To define a functional ARM instruction decoder, the first thing to do is to 
+% decide the matching order.
+% Why there is this matching order. Because the pattern matching in Coq is ordered
+% top to bottom, the value belongs to the $i$th constructor if and only if it is 
+% not in any case of the previous one, otherwise the Coq type checker will
+% consider such case is redundant. 
+% The 147 instructions can be first grouped into two, conditional and
+% unconditional.
+% For ARM instructions, the condition field \texttt{cond} $[31:28]$ indicates
+% the conditional execution of ARM instruction. 
+% These four bits describe different meaning when they are set or cleared.
+% And instruction under such condition has to be executed with the corresponding
+% CPSR (Current Program Status Register) in which N, Z, C, V flags statisfy
+% the given condition. If not so, the instruction will have no effect on processor
+% state and go to the next instruction without notification.
+% A small mount of instruction can only be executed unconditionally.
+% These instruction will be checked first by matching the first four bits with
+% $0b1111$ representing unconditional exection.
+% The rest are grouped by ARM instruction categories. The instruction under the
+% same category will not cover each other by the wildcard in general.
+% And we also decide 5 level of order to group the conditional instructions.
+% \begin{itemize}
+% \item
+% All the multiply instruction without an accumulator. They can be covered by
+% the similar multiply instruction with accumulator. The instructions without
+% accumulator fill the bits $[15:12]$ with $0b1111$ where the instruction with
+% accumulator using them to refer to the register for accumulator operand.
+% \item
+% Some instructions from ARMv5 architecture use the notion \texttt{SBO} or
+% \texttt{SBZ} to say that the instruction bit is read as one/zero whatever the
+% value of the bit is and it can not be rewrite.
+% These instruction need to be checked then, otherwise it is possible to hide by
+% some of the new instruction in ARMv6.
+% \item
+% A few load/store instructions work under previlige mode of processor.
+% They have two significant bit $P$ and $W$ assigned to special combination of value
+% to indicate this kind of instructions.
+% We have to put them in higher priority before
+% the similar instruction working for the other processor modes to prevent the
+% decoder from hiding them.
+% \item
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+% Instructions load/store from memory with format other than \texttt{word}.
+% They have the similar shape as the load/store with \texttt{word} too,
+% but use four bits $[7:4]$ refer to the load/store length, whether it is a
+% \texttt{half}, \texttt{double word} or a \texttt{signed byte}.
+% \item
+% The last group contains all the instruction operations with addressing modes.
+% Decoding this kind of instructions has to call the decoder for addressing mode
+% too.
+
+% For the executing version of formal simulator, we did not integret the extracted the Ocaml code
+% from the decoder Coq specification. Because the extraction principle will
+% translate a Coq pattern-matching which matches more than one terms into a
+% complicated one separating the terms and match them one by one.
+% Then during the compilation and excution,
+% a lot of time will be spend on such decoder.
+% A more efficient way is to generate independently a decoder in Ocaml code using
+% the similar generation stradegy as the Coq decoder generator.
+% A same affect is also done for C representation of \simlight.
+% \end{itemize}
+
+% For C representation decoder, we do not use such sequential algorithm.
+% It lowers too much of the execution speed. Instead, a decoder based on
+% {\it switch} is in used. It is also generated automatically
+% using the same generating stradegy, and be put in
+% the same file as instructions set descriptions in C language
+% with cases in {\it switch} statement.
+
+
+% In order to validate the \simsoc decoder,
+% we built an automatic test generator that generates all possible instructions
+% which exclude undefined and unpredictable ones.
+% We generate two files. The first contains the instruction binary, in the ELF
+% format.
+% Another file which
+% contains the same tests in assembly code is generated as well.
+% It is going to be compared with the result of decoding the binary tests.
+% Both files are generated according to the instruction encoding and syntax
+% as extracted from the reference manual.
+
+% The parameter values are chosen with respect to the validity constraints to
+% ensure that the instruction is defined and predictable.
+% For example, the parameters of the {\stt ADC} instruction (see
+% Fig.~\ref{fig:flatten}) are {\stt Rd}, {\stt Rn} and {\stt shift\_imm}.
+% Binary instructions are producted with different combinations of values for them.
+% From reading the \texttt{Syntax} and \texttt{Usage} part of each instruction,
+% we know there are several validity constraints for some instructions.
+% Some validity constraints are dealt with during the parameter generation.
+% For example, register {\stt Rn} in instruction {\stt LDRBT} cannot be
+% {\stt PC} ({\stt R15}),
+% then we chose directly a value between 0 and 14 to be assigned to {\stt Rn}.
+% Some other validity constraints involving two or more
+% parameters at the same time.
+% Continuing the example of {\stt LDRBT}, another constraint states
+% that {\stt Rd} and {\stt Rn} must be different:
+% the generator must produces two different values
+% and assigns them to {\stt Rd} and {\stt Rn}.
+% Similarly, we generate the corresponding assembly code. Under each encoding
+% table in the reference manual, the \texttt{Syntax} part explain the syntax
+% of the instruction, the instruction identifier and the same parameters as in
+% the encoding table.
+% We use the generated binary instruction as input for our decoder.
+% And it will output the decoding result in assembly code.
+% Then using the Unix command {\stt diff}, it is able to compare the decoder
+% results and the assembly tests. Minor issues have been detected and fixed in this
+% way.
+
+% \subsection{Experimental result and validation}
+% \label{ssc:vali}
+
+% With the functional defined semantics, it is possible to extract the whole Coq
+% specified ARMv6 simulator into ocaml code and compile it to an executable
+% binary. And it is also interesting to see tests running on a formal specified
+% simultor.
+% We provide the tests for the C specified Simlight.
+% In the mean time, we use these tests for our formal specification.
+% On one side, we use the {\stt arm-elf-gcc} compiler to
+% compile the C tests into ELF files to be used in Simlight. On the other side, we
+% write an easy translator then to translate the tests to Coq representation then
+% extract to ML files.
+% These small tests can be executed on the formal simultor in a sufficient
+% simulation speed, less than 1000 instructions per second.
+% Running an simple direct sum test costs around five minutes.
+% A sorting test then costs almost one day to finish, which in C specification it
+% only takes 0.78 second.
+% For such formal specification we do not care the execution speed,
+% it is aim to perform formal proofs for the simulation correctness. 
+
+
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "thesis"
+%%% End: 

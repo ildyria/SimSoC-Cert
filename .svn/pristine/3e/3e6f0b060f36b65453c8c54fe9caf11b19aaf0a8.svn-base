@@ -1,0 +1,8 @@
+Material to be added here, as support to
+"Scaling up Small Inversions", by JF Monin and SHI Xiaomu, submitted.
+
+This directory contains (or will soon contain):
+- scripts for the examples given in the paper
+  (file paperscript.v)
+- a tar gzipped directory for the relevant part of SimSoC-cert
+- an updated version of the paper

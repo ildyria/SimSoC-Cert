@@ -1,0 +1,14 @@
+Perhaps, we could say a few words on the fact that we are
+trying to simulate a chip connected to the network.
+I could add a paragraph on what we really have:
+
+The chip simulator includes a network controller simulator
+(from Texas Instruments, not proven...)
+and this network controller simulator
+is plugged to the real network through an interface,
+using the libpcap library, so the simulator can
+communicate with the real world. I do have a ping demo...
+
+and we can claim to want to prove networking software...
+
+Vania

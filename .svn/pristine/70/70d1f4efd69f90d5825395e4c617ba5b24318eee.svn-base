@@ -1,0 +1,78 @@
+\section{Conclusion}
+\label{sec:conclusion}
+
+The trust we may have in our result depends on
+the faithfulness of its statement with relation to 
+the expected behavior of the simulation of \texttt{ADC} in \simlight.
+It is mainly based on 
+the manually written Coq and C library functions, 
+the translators written in OCaml described in 
+Section~\ref{sec:overallarchi}
+(including the pretty-printer for Coq),
+the final phase of the Compcert compiler,
+and the formal definition of $\mathit{proc\_state\_related}$.
+
+
+
+The current development is available online\footnote{%
+\label{f:site}
+\url{http://formes.asia/media/simsoc-cert/}}.
+Figures on the size of our current development are given in
+Table~\ref{tab:sizes}.
+
+\begin{table}[t]
+  \centering
+  \begin{tabular}{|l|r@{~}|}
+    \hline 
+  % "wc -l" tested with svn revision : 1602
+    Original ARM ref man (txt)                                             & 49655 \\ % wc -l arm6/arm6.txt
+    ARM Parsing to an OCaml AST                                            & 1068 \\ % wc -l arm6/parsing/*{ml,sh}
+    Generator (Simgen) for ARM and SH with OCaml and Coq pretty-printers   & 10675 \\ % wc -l simgen/*{ml,v,mly,mll}
+    Generated C code for Simlight ARM operations                           & 6681 \\ % wc -l arm6/simlight/slv6_iss.c
+    General Coq libraries on ARM                                           & 1569 \\ % wc -l arm6/coq/*v
+    Generated Coq code for ARM operations                                  & 2068 \\
+    Generated Coq code for ARM decoding                                    & 592 \\
+    Proof script on \texttt{ADC}                                           & 1461 \\ % wc -l devel/xiaomu/test_csem_draft.v
+    \hline 
+  \end{tabular}
+  \smallskip
+  \caption{Sizes (in number of lines)}
+  \label{tab:sizes}
+\end{table}
+
+In the near future, we will extend the work done on \texttt{ADC} 
+to all other operations. 
+The first step will be to design relevant suitable tactics,
+from our experience on \texttt{ADC}, 
+in order to shorten a lot the current proof and make it easier
+to handle and to generalize.
+We are confident that the corresponding work on 
+the remaining ARM operations will then be done much faster,
+at least for arithmetical and Boolean operations.
+
+Later on, we will consider similar proofs for the decoder
+-- as for the body of operations, it is already automatically
+extracted from the ARM reference manual.
+Then a proven simulation loop (basically, repeat decoding
+and running operations) will be within reach.
+
+In another direction, we also reuse the methodology based on
+automatic generation of simulation code and Coq specification
+for other processors. 
+The next one which is already considered is SH4. 
+In fact, the same approach as the ARMv6 has been followed, and a
+similar Coq representation can currently be generated from the SH4
+manual. Moreover, as the SH pseudo-code is simpler than the ARM, we are
+hence impatient to work on its equivalence proof.
+
+
+\subsection*{Acknowledgement}
+We are grateful to Vania Joloboff and Claude Helmstetter for
+their many explanations on SimSoC.
+We also wish to thank the anonymous reviewers for their
+detailed comments and questions. 
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "cpp"
+%%% End: 

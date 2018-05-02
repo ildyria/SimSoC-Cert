@@ -1,0 +1,47 @@
+\chapter{Example: the complete ADC instruction in Simlight}
+\label{app:adc}
+
+Here is the complete \compcert C code for simulating the ADC instruction
+(Add with Carry) in \simlight.
+This program contains a pretty-printed version of
+the \compcert C AST 
+which was automatically derived from the pseudo-code for ADC
+given in the ARMv6 reference manual,
+using the generator described in Chapter~\ref{cpt:frame}.
+together with library functions, which were written by hand
+according to specifications in the ARMv6 reference manual.
+
+\newpage
+\lstset{
+  language=C,                % choose the language of the code
+  basicstyle=\footnotesize,
+  numbers=none,                   % where to put the line-numbers
+  stepnumber=1,                   % the step between two line-numbers.        
+  numbersep=5pt,                  % how far the line-numbers are from the code
+  backgroundcolor=\color{white},  % choose the background color. You must add \usepackage{color}
+  showspaces=false,               % show spaces adding particular underscores
+  showstringspaces=false,         % underline spaces within strings
+  showtabs=false,                 % show tabs within strings adding particular underscores
+  tabsize=2,                      % sets default tabsize to 2 spaces
+  captionpos=b,                   % sets the caption-position to bottom
+  breaklines=true,                % sets automatic line breaking
+  breakatwhitespace=true,         % sets if automatic breaks should only happen at whitespace
+%  title=\lstname,                 % show the filename of files included with \lstinputlisting;
+  lineskip=-.5ex,
+}
+
+\lstinputlisting{adc_ast_lib.c}
+
+\newpage
+
+\lstinputlisting{adc_ast.c}
+
+% \begin{alltt}\footnotesize
+% \input{adc_ast.c}
+% \end{alltt}
+
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "thesis"
+%%% End: 

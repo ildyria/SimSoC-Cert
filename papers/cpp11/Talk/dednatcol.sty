@@ -1,0 +1,248 @@
+% $Id: dednatcol.sty 203 2009-03-03 20:30:00Z serasset $
+
+%%%%%%%%%%%%%%%%%% Couleurs %%%%%%%%%%%%%%%%%%
+\RequirePackage{color}
+
+\definecolor{marron}{rgb}{0.7, 0.3, 0}
+\definecolor{mygreen}{rgb}{0.0,0.5,0.0}
+\definecolor{brique}{rgb}{0.75, 0.05, 0}
+\definecolor{violet}{rgb}{.75, 0, .75}
+
+\definecolor{lightblue}{rgb}{0.75,0.85,1}
+\definecolor{lightred}{rgb}{1,0.8,0.8}
+\definecolor{lightgreen}{rgb}{0.6,1,0.6}
+\definecolor{semilightgreen}{rgb}{0.5,1,0.5}
+\definecolor{lightyellow}{rgb}{1.0,1.0,0.5}
+\definecolor{lightorange}{rgb}{1.0, 0.87, 0.01}
+
+\newcommand{\marron}[1]{\textcolor{marron}{#1}}
+\newcommand{\cvert}[1]{\textcolor{mygreen}{#1}}
+\newcommand{\bleu}[1]{\textcolor{blue}{#1}}
+\newcommand{\rouge}[1]{\textcolor{red}{#1}}
+\newcommand{\brique}[1]{\textcolor{brique}{#1}}
+\newcommand{\violet}[1]{\textcolor{violet}{#1}}
+
+%%%%%%%%%%%%%%%%%% Logique %%%%%%%%%%%%%%%%%%
+
+
+% enneigée
+
+\newcommand{\egdef}%
+   {\ensuremath{\:\mathrel{\raisebox{-.7ex}%
+   {$\stackrel{\textrm{def}}{=\mkern-8mu=}$}}\:}}
+
+\newcommand{\egg}[1][=]{\makebox[.8em][l]{$#1$}\hspace{2\arraycolsep}}
+\newcommand{\comvg}[1]{\qquad\mbox{\textrm{\color{red}\{#1\}}}}
+
+% Connecteurs
+
+\newcommand{\absu}{\ensuremath{\rouge \bot}}
+\newcommand{\absut}{\absu\xspace}
+\newcommand{\impl}{\ensuremath{\,\Rightarrow\;}}
+\newcommand{\equi}{\ensuremath{\mathrel{\Leftarrow\mkern-12mu\Rightarrow}\;}}
+%{\ensuremath{\,\Leftrightarrow\;}}
+\newcommand{\et}{\ensuremath{\wedge\;}}
+\newcommand{\ou}{\ensuremath{\vee\;}}
+
+\newcommand{\inclus}{\ensuremath{\subseteq}}
+\newcommand{\inter}{\ensuremath{\cap}}
+\newcommand{\union}{\ensuremath{\cup}}
+
+\newcommand{\qqs}[1]{\ensuremath{\forall#1\;}}
+\newcommand{\qqsv}[1]{\qqs{\cvert{#1}}}
+\newcommand{\qqsm}[1]{\qqs{\marron{#1}}}
+\newcommand{\forallv}[1]{\ensuremath{\forall\cvert{#1}}}
+
+\newcommand{\exi}[1]{\ensuremath{\exists\, #1\;}}
+\newcommand{\exiv}[1]{\exi{\cvert{#1}}}
+\newcommand{\existsv}[1]{\ensuremath{\exists\cvert{#1}}}
+
+
+\newcommand{\fl}{\ensuremath{\rightarrow}}
+\newcommand{\lfl}{\ensuremath{\longrightarrow}}
+\newcommand{\implm}{\ensuremath{\Rightarrow}}
+\newcommand{\equim}{\ensuremath{\mathrel{\Leftarrow\mkern-12mu\Rightarrow}}}
+%{\ensuremath{\,\Leftrightarrow\;}}
+\newcommand{\etm}{\ensuremath{\wedge}}
+\newcommand{\oum}{\ensuremath{\vee}}
+
+\newcommand{\varb}[1]{\bleu{\ensuremath{#1}}}
+\newcommand{\varm}[1]{\marron{\ensuremath{#1}}}
+\newcommand{\varv}[1]{\cvert{\ensuremath{#1}}}
+\newcommand{\varr}[1]{\rouge{\ensuremath{#1}}}
+
+\newcommand{\htbrack}[1]{\phantom{[}#1\phantom{]}}
+\newcommand{\hypnonum}[2]{\ensuremath{\mathsf{#1}}}
+\newcommand{\hypv}[2]{\ensuremath{\overbrace{\mathsf{#1}}^{\cvert{\htbrack{#2}}}}}
+\newcommand{\hypr}[2]{\ensuremath{\overbrace{\mathsf{#1}}^{\rouge{\htbrack{#2}}}}}
+\newcommand{\rawhypv}[2]{$\overbrace{#1}^{\cvert{#2}}$}
+
+\newcommand{\lhypv}[2]{\ensuremath{\overbrace{\mathsf{#1}}^{\cvert{[#2]}}}}
+\newcommand{\lhypr}[2]{\ensuremath{\overbrace{\mathsf{#1}}^{\rouge{[#2]}}}}
+
+\newcommand{\subs}[2]{\ensuremath{\frac{#1}{#2}}}
+
+%%
+\newcommand{\elim}{\ensuremath{\mathrm{E}}}
+\newcommand{\intro}{\ensuremath{\mathrm{I}}}
+\newcommand{\elimg}{\ensuremath{\elim_1}}
+\newcommand{\elimd}{\ensuremath{\elim_2}}
+\newcommand{\introg}{\ensuremath{\intro_1}}
+\newcommand{\introd}{\ensuremath{\intro_2}}
+
+%\newcommand{\DEF}{\ensuremath{\mathrm{d\acute{e}f}}}
+\newcommand{\DEF}{\ensuremath{\textrm{def}}}
+
+\newcommand{\implintronaif}[1]{%
+  \RightLabel{$_{\implm\intro}$}\UnaryInfC{#1}}
+\newcommand{\implintro}[2]{%
+  \RightLabel{$_{\implm\intro\rouge{[#2]}}$}\UnaryInfC{#1}}
+\newcommand{\implelim}[1]{%
+  \RightLabel{$_{\implm\elim}$}\BinaryInfC{#1}}
+
+\newcommand{\ouintrog}[1]{%
+  \RightLabel{$_{\oum\introg}$}\UnaryInfC{#1}}
+\newcommand{\ouintrod}[1]{%
+  \RightLabel{$_{\oum\introd}$}\UnaryInfC{#1}}
+\newcommand{\ouelim}[3]{%
+  \RightLabel{$_{\oum\elim\rouge{[#2,#3]}}$}\TrinaryInfC{#1}}
+
+\newcommand{\etintro}[1]{%
+  \RightLabel{$_{\etm\intro}$}\BinaryInfC{#1}}
+\newcommand{\etelimg}[1]{%
+  \RightLabel{$_{\etm\elimg}$}\UnaryInfC{#1}}
+\newcommand{\etelimd}[1]{%
+  \RightLabel{$_{\etm\elimd}$}\UnaryInfC{#1}}
+
+\newcommand{\qqsintro}[1]{%
+  \RightLabel{$_{\forall_\intro}$}\UnaryInfC{#1}}
+\newcommand{\qqselim}[3]{%
+  \RightLabel{$_{\forall_\elim{(\subs{#2}{#3})}}$}\UnaryInfC{#1}}
+
+\newcommand{\exintro}[1]{%
+  \RightLabel{$_{\exists_\intro}$}\UnaryInfC{#1}}
+\newcommand{\exelim}[2]{%
+  \RightLabel{$_{\exists_\elim\rouge{[#2]}}$}\BinaryInfC{#1}}
+
+\newcommand{\eqintro}[1]{%
+  \AxiomC{}%
+  \RightLabel{$_{=\intro}$}\UnaryInfC{#1=#1}}
+\newcommand{\eqelim}[1]{%
+  \RightLabel{$_{=\elim}$}\BinaryInfC{#1}}
+
+\newcommand{\botelim}[1]{%
+  \RightLabel{$_{\bot\elim}$}\UnaryInfC{#1}}
+
+\newcommand{\nomnnelim}{$\neg\neg\elim$}
+\newcommand{\nnelim}[1]{%
+  \RightLabel{$_{\neg\neg\elim}$}\UnaryInfC{#1}}
+
+\newcommand{\regledef}[2]{%
+  \dottedLine
+  \RightLabel{$_{#1\,\DEF}$}\UnaryInfC{#2}}
+\newcommand{\reglerac}[2]{%
+  \doubleLine
+  \RightLabel{$_{#1\,\DEF}$}\UnaryInfC{#2}}
+\newcommand{\regledeflie}[3]{%
+  \dottedLine
+  \RightLabel{$_{#1\,\DEF}\rouge{[#3]}$}\UnaryInfC{#2}}
+\newcommand{\regleraclie}[3]{%
+  \doubleLine
+  \RightLabel{$_{#1\,\DEF}\rouge{[#3]}$}\UnaryInfC{#2}}
+
+
+\newcommand{\negdef}[1]{\regledef{\neg}{#1}}
+\newcommand{\equivdef}[1]{\regledef{\equim}{#1}}
+\newcommand{\uniondef}[1]{\regledef{\union}{#1}}
+\newcommand{\interdef}[1]{\regledef{\inter}{#1}}
+\newcommand{\incldef}[1]{\regledef{\inclus}{#1}}
+\newcommand{\videdef}[1]{\regledef{\emptyset}{#1}}
+\newcommand{\compldef}[1]{\regledef{\backslash}{#1}}
+\newcommand{\partdef}[1]{\regledef{\mathcal{P}}{#1}}
+
+%\newcommand{\inclrac}[2]{\regleraclie{\inclus}{#1}{#2}}
+\newcommand{\inclrac}[2]{%
+  \doubleLine
+  \RightLabel{$_{\inclus\intro}\rouge{[#2]}$}\UnaryInfC{#1}}
+
+\newcommand{\regleext}[1]{%
+  \RightLabel{$_{\mathrm{ext}}$}\UnaryInfC{#1}}
+\newcommand{\racext}[3]{%
+  \doubleLine
+  \RightLabel{$_{\mathrm{ext}\rouge{[#2,#3]}}$}\BinaryInfC{#1}}
+
+\newcommand{\inclelim}[1]{%
+  \doubleLine
+  \RightLabel{$_{\inclus\elim}$}\BinaryInfC{#1}}
+  
+\newcommand{\interintro}[1]{%
+  \doubleLine
+  \RightLabel{$_{\etm\intro\inter}$}\BinaryInfC{#1}}
+\newcommand{\interelimg}[1]{%
+  \doubleLine
+  \RightLabel{$_{\inter\etm\elimg}$}\UnaryInfC{#1}}
+\newcommand{\interelimd}[1]{%
+  \doubleLine
+  \RightLabel{$_{\inter\etm\elimd}$}\UnaryInfC{#1}}
+
+\newcommand{\unionintrog}[1]{%
+  \doubleLine
+  \RightLabel{$_{\oum\introg\union}$}\UnaryInfC{#1}}
+\newcommand{\unionintrod}[1]{%
+  \doubleLine
+  \RightLabel{$_{\oum\introd\union}$}\UnaryInfC{#1}}
+\newcommand{\unionelim}[3]{%
+  \doubleLine
+  \RightLabel{$_{\union\oum\elim\rouge{[#2,#3]}}$}\TrinaryInfC{#1}}
+
+\newcommand{\nomtiersex}{${PEM}$}
+\newcommand{\tiersex}[1]{%
+  \AxiomC{\phantom{f}}%
+  \RightLabel{$_{PEM}$}\UnaryInfC{#1}}
+
+\newcommand{\natcas}[1]{%
+  \RightLabel{$_{\mathsf{nat}\textrm{-}\mathrm{case}}$}\BinaryInfC{#1}}
+\newcommand{\natelim}[1]{%
+  \RightLabel{$_{\mathsf{nat}\textrm{-}\mathrm{ind}}$}\BinaryInfC{#1}}
+\newcommand{\natelgen}[1]{%
+  \RightLabel{$_{\mathsf{nat}\textrm{-}\mathrm{strind}}$}\UnaryInfC{#1}}
+
+%%%%%%%
+\RequirePackage{dsfont}
+\newcommand{\nat}{\ensuremath{\marron{\mathds{N}}}}   %{I\!\!N}
+\newcommand{\real}{\ensuremath{\marron{\mathds{R}}}}  %{I\!\!R}
+\newcommand{\rat}{\ensuremath{\marron{\mathds{Q}}}}   %{I\!\!\!Q}
+\newcommand{\integ}{\ensuremath{\marron{\mathds{Z}}}} %{Z\!\!\!\!Z}
+
+%\newcommand{\vide}{\ensuremath{\marron{\emptyset}}}   
+\newcommand{\vide}{\ensuremath{\marron{\varnothing}}}   
+\newcommand{\univ}{\ensuremath{\marron{\mathrm{U}}}\xspace}
+
+\newcommand{\cP}{\ensuremath{\mathcal P}}
+\newcommand{\cC}{\ensuremath{\mathcal C}}
+\newcommand{\cY}{\cvert{\ensuremath{\mathcal Y}}}
+\newcommand{\cF}{\ensuremath{\mathcal F}}
+%\newcommand\cV{\mathcal{V}}
+%\newcommand\cX{\mathcal{X}}
+%\newcommand\cT{\mathcal{T}}
+
+\newcommand{\dom}{\ensuremath{\mathcal D}}
+
+\newcommand{\range}{\ensuremath{\mathcal{IM}}}
+
+% variable verte
+
+\newcommand{\vavo}[1]{{\cvert{\ensuremath{\mathit{#1}_0}}}\xspace}
+\newcommand{\vamo}[1]{{\marron{\ensuremath{\mathit{#1}_0}}}\xspace}
+\newcommand{\vav}[1]{{\cvert{\ensuremath{\mathit{#1}}}}\xspace}
+\newcommand{\vam}[1]{{\marron{\ensuremath{\mathit{#1}}}}\xspace}
+\newcommand{\vab}[1]{{\bleu{\ensuremath{\mathit{#1}}}}\xspace}
+\newcommand{\var}[1]{{\rouge{\ensuremath{\mathit{#1}}}}\xspace}
+
+% constante marron
+\newcommand{\cm}[1]{{\marron{\ensuremath{\mathsf{#1}}}}\xspace}
+
+% type bleu
+\newcommand{\tb}[1]{{\bleu{\ensuremath{\mathit{#1}}}}\xspace}
+\newcommand{\cb}[1]{{\bleu{\ensuremath{\mathsf{#1}}}}\xspace}
+

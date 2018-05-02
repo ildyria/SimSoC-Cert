@@ -1,0 +1,616 @@
+----------------------- REVIEW 1 ---------------------
+PAPER: 18
+TITLE: Scaling up Small Inversions
+AUTHORS: Jean-Francois Monin and Xiaomu Shi
+
+REVIEWER'S CONFIDENCE: 4 (expert)
+
+Further work on a technique for justifying _inversion_ proof steps in
+Coq, for deducing from the form of a hypothesis that it must have been
+proved only with some subset of the available inference rules,
+generating new hypotheses based on this new knowledge.  A key issue is
+how to represent these proof steps as proof terms, since Coq's
+built-in "inversion" tactic can produce proof terms so large that the
+proving process is slowed noticeably.  The authors address that
+problem with a pattern for encoding inversion principles, inspired by
+impredicative encodings of inductive types in type theory.  Another
+motivating problem is maintainability of proof scripts.  The authors
+demonstrate how their alternate inversion approach leads to shorter
+and less brittle proofs, in a concrete case study of a verified
+hardware simulator connected to the CompCert C semantics.
+
+This is the sort of paper often politely referred to as "highly
+technical."  Even getting to the point of understanding what problem
+is being solved and why it matters would be beyond the average
+participant in most any conference beside CPP and ITP.  Luckily, this
+is CPP, so we can consider the paper. ;)
+
+The paper is a tutorial on a very practical technique for more
+efficient induction, so I favor accepting it, with some reservations.
+Two motivations are given for the new technique: shrinking proof terms
+and reducing proof script brittleness.  I find the first motivation
+convincing (though not hugely so, as the evaluation section
+demonstrates a mere factor-of-4 running time improvement).  The second
+motivation is not explained well enough for me to believe it is a
+serious factor.
+
+Let me expand about my objection to the brittleness argument.  Near
+the end of the paper, the authors write how they simplified their
+proof scripts by writing an Ltac function that automatically applies
+their manually coded small inversion lemmas (or is it just lemma?).  I
+see no reason why a similar approach couldn't provide the same
+anti-brittleness benefits based on the built-in "inversion"; and, in
+fact, the authors cede this point in their discussion.  They write
+that the remaining anti-brittleness advantage of their new tactic is
+that it chooses names intelligently, while the generic name algorithm
+of "inversion" would lead to worse results.  I am slightly sympathetic
+to this idea, but really I'd hope to see further automation that
+completely removes the need to refer to names explicitly.  I hope the
+authors would agree that, in such a script, standard "inversion" is
+just as effective as their new version, from an anti-brittleness
+perspective.  Also, I imagine one could use normal "inversion" to
+prove higher-level lemmas and then write Ltac code to apply those
+lemmas with any name scheme one likes.
+
+But, modulo that "overselling" of the new technique, I think this is a
+solid idea that other Coq users may benefit from applying.  The
+relevance to popular formalization domains is good, and the
+explanation in the paper is reasonable.
+
+Page 1:
+[DONE]Abstract: LaTeX quotes ``like this'' will look nicer than what you're
+using now. 
+[DONE]"Rule names such as E1 and E2": These aren't the two rules
+in the example.  
+[DONE]"yield the absurd" -> "yield a contradiction"?
+
+Page 2:
+[DONE]"this is no other option" -> "there is no other option" 
+[DONE]Missing word:
+"If the relation non-deterministic" (add "is") At this point I stopped
+wanting to note grammatical errors.  I recommend proofreading, ideally
+by a native English speaker.
+
+Page 4:
+[?]"when a condition is satisfied: the conclusion of the current goal
+fits all arguments of the hypothesis to be analyzed by pattern
+matching": I think I know which condition you must be referring to
+here, but this wording doesn't express it to me.
+
+Page 7:
+[DONE]"filtering \mathcal P": what is this letter?  Seems to stand for a
+pattern, but the text doesn't say that before its first use.
+
+Page 12:
+[DONE]"VCC generator"?  Do you mean "VC generator"?
+
+
+----------------------- REVIEW 2 ---------------------
+PAPER: 18
+TITLE: Scaling up Small Inversions
+AUTHORS: Jean-Francois Monin and Xiaomu Shi
+
+REVIEWER'S CONFIDENCE: 4 (expert)
+
+Summary
+-------
+
+Inversion enables to use rules of a natural deduction system backwards. For 
+example, consider the even predicate over the Peano naturals.
+
+                   
+ --------      
+  even 0       
+
+  even n
+ ----------------
+  even (S (S n))
+
+Given H : even 1, inversion on H allows to derive a falsehood as even 1 cannot
+be constructed using these rules. Given H : even (S (S n)), inversion on H 
+allows to derive even n as the second rule is the only way to construct even 
+(S (S n)).
+
+This paper presents a technique to perform inversion in the Coq proof assistant.
+Compared to Coq's default inversion tactic, this technique enjoys better 
+efficiency and controllability.
+
+
+Assessment 
+----------
+
+Although the technique presented in this paper is certainly useful, the work is 
+not finished and the paper requires a lot of improvements. More specifically:
+
+* For it to be finished, I would expect a fully automated tactic that can be 
+  used in a similar way as Coq's built-in inversion tactic. Currently, the
+  paper seems like a too small extension of [7].
+
+* The article requires a lot of knowledge on technicalities of Coq which are
+  not made explicit in the paper. For a submissions to a conference like CPP,
+  targeting a broader audience than just Coq users, I find this unsatisfactory.
+
+* I would like to see some more details on Coq's pattern match construct, and 
+  why, unlike Agda's, it is not capable of performing inversion directly. 
+
+* A rather big part of the article (most of Section 4) is on the SimSoC-cert
+  project. Although this project seems interesting, the described details are
+  irrelevant to the article. The fact that such projects may involve large 
+  inductively defined relations, on which many inversions are required, is 
+  obvious and can be made clear without going into the details of SimSoc.
+
+Apart from that, the authors have made the Coq sources of their development
+available online. These sources compile out of the box and seem to correspond
+to the work described in the article.
+
+
+Specific comments
+-----------------
+
+[DONE]p1, abstract: "''inversion''" => "``inversion''"
+
+[DONE]p1, abstract: "suitable diagonal auxiliary predicate" => "suitable auxiliary 
+    diagonal predicate"
+
+[DONE]p1. It may be more clear to explicitly state that the predicate even is on the
+    Peano naturals.
+
+[DONE]p1. "since, as (S O)" => use either "since" or "as", not both.
+
+[DONE]p2. "decomposed in" => "decomposed into"
+
+[DONE]p2. "in the general case, rules include ..." => "in the general case, rules may
+    include ...". Rules do not have to include "...".
+
+[DONE]p2. "because their semantics is described" => "whose semantics is described".
+    A semantics of a programming language _may_ be described without inductively
+    defined relations as well.
+
+[DONE]p2. "in the Coq syntax" => "in Coq syntax"
+
+[DONE]p2. "an alternative for even numbers" => "an alternative way to specify even
+    natural numbers"
+
+[DONE]p2. "Here True denotes a trivially" => "Here True denotes the trivially"
+
+[DONE]p2. "If even is encoded with even_f, this is no other option" => I do not
+    understand this sentence.
+    
+[DONE]p2. "a n-ary relation" => "an n-ary relation"
+
+[?]p2. It is mentioned that a relation A1 x .. x An can be modeled as a function
+    A1 -> .. -> An. This remark seems irrelevant. First, this is possible if,
+    and only if, the relation is a function. Secondly, this is not what is 
+    being done for the case of even.
+
+[DONE]p2. "if the relation non-deterministic" => "if the relation is 
+    non-deterministic"
+
+[?]p2. "this essentially amounts to provide a decision procedure" => if some
+    branches of the pattern match contain quantifiers, it may be very far from
+    a decision procedure.
+
+[DONE]p3. "not always the better" => "not always better"
+
+[DONE]p3. "they are inductively defined" => "they may be inductively defined"
+
+[DONE]p3. "the main tool proposed to the Coq user" => I think "the main tool 
+    available to ..." would be better than "proposed".
+
+[TODO]p3. "inversion which, basically performs ..." you should mention generation
+    of equalities too. Also, I think it would be helpful to demonstrate
+    the behavior of inversion on the even example. Such a demonstration would
+    also indicate why such big terms are generated.
+    
+[TODO]p3. It is mentioned that the inversion tactic sometimes fails. An example of
+    such a case would be welcome. Maybe inductive types with dependently typed 
+    indexes are a good example? For example:
+    
+     Inductive odd : forall n : nat, Fin.t n -> Prop :=
+       | odd_1 n : odd (S n) F1
+       | odd_SS n i : odd n i -> odd _ (FS (FS i)).
+
+    Inversion on odd _ (FS (FS i))) with Coq's inversion tactic yields the
+    equality
+    
+      existT (fun n : nat => t n) n i0 = existT (fun n : nat => t n) n i
+    
+    which is not simplified. A variation of the authors' technique works
+    flawless, so I expect the author's technique to work as well.
+    
+     Definition odd_SS_inv n i (H : odd _ (FS (FS i))) : odd n i :=
+       match H in odd _ j return
+         match j with
+         | FS _ (FS _ i) => odd _ i
+         | _ => True
+         end : Prop with
+       | odd_1 _ => I
+       | odd_SS _ _ H => H
+       end.
+    
+[TODO]p3. "functions defined in interactive mode" => to those not well-known with
+    Coq this may seem strange and slightly disconnected. It would be useful to
+    give an example, like the head function on vectors.
+
+[DONE]p3. "in recent versions of Coq ... can optionally be given the names" => This
+    is not a recent feature. I do not know when it has been exactly introduced,
+    but documentation for this feature has been around since commit 8425 at 
+    December 19, 2003 in Coq SVN.
+    
+[DONE]p4. "hardly usable in high-level tactics" => what are high-level tactics?
+    Do you not just mean "proof scripts"?
+
+[DONE]p4. It is mentioned that the proposed technique can be used in Agda too, but
+    as Agda has a more powerful dependent pattern match, I think this is not
+    very relevant.
+    
+     data Nat : Set where
+       O : Nat
+       S : Nat -> Nat
+
+     data Even : Nat -> Set where
+       Even_O : Even O
+       Even_SS : {n : Nat} -> Even n -> Even (S (S n))
+
+     even_SO_inv : {A : Set} -> Even (S O) -> A
+     even_SO_inv ()
+
+     even_SS_inv : {n : Nat} -> Even (S (S n)) -> Even n
+     even_SS_inv (Even_SS p) = p
+
+[DONE]p4. "section 4 contains" => capitalize Section (this occurs more often)
+
+[DONE]p5. "if n and P n are often clear" => "if n and P n are clear"
+
+[DONE]p5. "This situation is covered in [7] as follows" no need to cite [7] here
+    as the whole section is on [7].
+    
+[DONE]p5. "Each of this goals reduces to" => "Each of these goals reduce to"
+
+[DONE]p6. Section 3 is called "Handling positive cases". However, a definition
+    of "positive cases" seems to be absent.
+  
+[TODO]p6. Inversion principles for each constructor are defined, namely pr_1 for
+    E0 and premises_E2 for E2. Is it not better to combine these. For example:
+    
+     Definition invert_even {n} (en: even_i n) :=
+       let diag x :=
+         match x with
+         | 1 => forall (X : Prop), X
+         | S (S y) => forall (X: Prop), (even_i y -> X) -> X
+         | _ => True 
+         end in
+       match en in even_i n return diag n with
+       | E2 p e => fun X k => k e
+       | _ => I
+       end.
+    
+[?]p7. "with more than one parameter" => I think parameters are those on the left 
+    hand side of the colon. Since parameters are fixed for all constructors,
+    they are not interesting for inversion. I believe "indexes" would be the
+    right word.
+
+[TODO]p7. The example language contain Boolean values, whereas there are no Boolean
+    functions in the term language. It may be better to omit Boolean values.
+
+[DONE]p10. "find automatically" => "automatically find"
+
+[?]p10. Extra features. As far as I see, feature 1, 2, 4 and 5 can easily be
+     achieved with an ltac wrapper around the old inversion tactic. Feature 3 
+     may be harder, as indicated in the paper itself.
+
+[TODO]p10. How do you perform the naming of constrains? How do you avoid the user
+     writing down a large intro_pattern as they have to do for the old inversion
+     tactic?
+
+[DONE]p11. "because of allows" => "because it allows"
+
+[DONE]p11. "As a unexpected" => "As an unexpected"
+
+[DONE]p11. "we didn't" => "we did not"
+
+[DONE]p11. "Comparing development times is provides" => "Comparing development times
+     provides"
+
+[TODO]p11. Benchmarks: instead of only showing timings of single inversion steps, it
+     would be interesting to show the speed up in real proofs, like the one the
+     mentioned in the paper that took one minute to compile before.
+
+[DONE]p11. "we don't" => "we do not"
+
+[DONE]p12. "we can expect our technique could be" => "we expect our technique to be"
+
+
+----------------------- REVIEW 3 ---------------------
+PAPER: 18
+TITLE: Scaling up Small Inversions
+AUTHORS: Jean-Francois Monin and Xiaomu Shi
+
+REVIEWER'S CONFIDENCE: 4 (expert)
+
+Summary of the paper
+====================
+
+At the 2nd Coq workshop, the first author introduced the method of
+so-called ``small inversions'': when inverting instances of inductive
+families, rather than work with the complex, potentially unwieldy and
+unmaintainable ``large'' proof terms generated by the
+\texttt{inversion} tactic in Coq, instead introduce a customised,
+hand-written proof term which is better adapted to the problem. Monin
+described his method as a ``trick'', and indeed it did seem ingenious
+and impressive.
+
+The present paper does two things: it presents Monin's <<astuce>> once
+more, in the first 7,5 pages, and then follows with the ``scaling up'':
+3,5 pages about the application, and to some extent, systematisation, of
+the method.  The authors work in the setting of a large suite of
+machine-generated proofs about simulation relations between a direct
+representation the ARM6 instruction set, and a C implementation of a
+simulator for the ARM6, itself given a semantics in Coq via Leroy's
+CompCert embedding.
+
+General evaluation
+==================
+
+The original paper was an interesting, if minor, contribution, well
+motivated and described. So the real value of the present paper surely
+lies in the discussion of the second part, and the evidence given for
+the claim that, indeed, the ``trick'' scales up.
+
+On the basis of the paper, and a very brief examination of the
+associated proof scripts, I believe the authors' claim. But the
+second, rather-less-than-half, of the paper, is too sketchy to convey
+any real insight beyond the anecdotal regarding productivity gain
+achieved.
+
+The paper therefore is a relevant contribution to CPP, and may well
+inspire others to emulate the method. But it is not obvious that they
+would not already have done so on reading the original paper and/or
+hearing the original talk.
+
+Accordingly, we can offer only weak accept for the current version of
+the paper.
+
+
+Remarks on the content of the paper
+===================================
+
+The main point of the first part is that an off-the-shelf generic
+tactic such as \texttt{inversion} in Coq may generate complex (hence
+expensive to type-check), and unmaintainable proof scripts. This seems
+an inevitable trade-off associated with generic tactics, but without a
+more fine-grained analysis than the authors give, who is to say when
+their method is to be preferred over appeals to \texttt{inversion}?
+How much of the weakness of the coq \texttt{inversion} tactic is due
+to dependent types?
+
+No comparison is attempted with comparable methods in other systems
+(though these are mentioned) such as Isabelle (for an HOL encoding of
+inductive definitions) or competing type-theoretic implementations
+such as Agda or McBride's ``Elimination with a motive'' approach
+described in careful detail in his PhD thesis and the TYPES 2000
+workshop post-proceedings LNCS volume (where, incidentally, the
+``continuation passing style'' flavour of inversion is also
+discussed).  There is recent work on inversion for dependent types in
+Wilmer Ricciotti's PhD thesis on Matita (from Bologna).
+
+Section 3 does present material and techniques which go beyond the
+originalpaper, but at some cost in intelligibility: the central
+observation underlying \texttt{inversion} of related methods in other
+systems is the appeal to \emph{equations} to correlate the general
+hypothesis of induction with respect to some inductive family, and the
+specific instance given by the goal at hand. The definition of pr_plus
+at the end of Section 3 does nothing more (or less) than give the CPS
+encoding, namely that of Leibniz equality, of the corresponding
+equation which constrains the output values.
+
+This is a short paper; there is room for a more intersting detailed
+example, including the actual special purpose inversion tactic used in
+the example.  The Coq files for this worked example could be made
+available online.
+
+Some odd uses of language, as well as typos, are sprinkled through the
+text. This one stood out:
+
+[DONE]p.3 "seldom intricate cases" --> "rare intricate cases"
+
+
+----------------------- REVIEW 4 ---------------------
+PAPER: 18
+TITLE: Scaling up Small Inversions
+AUTHORS: Jean-Francois Monin and Xiaomu Shi
+
+REVIEWER'S CONFIDENCE: 3 (high)
+
+This paper describes a systematic (but not automated) proof technique
+for inverting inductively defined relations in Coq, which yields
+smaller proof terms than the built-in inversion tactic. The technique
+could be adapted to other systems based on CIC. The essence of the
+technique has been presented at the 2nd Coq workshop in 2010 but never
+published; this paper systematizes and marginally generalizes it, and
+reports on its application to the proof of correctness of an ARM
+simulator written in CompCert C.
+
+At the end of Section 1, the authors say that the original trick of
+[7] necessitated significant modifications to scale up. After reading
+the rest of the paper and scanning through [7], the modifications do
+not seem that significant: these are basically the (not particularly
+intricate) general schema given in page 7, plus the parameterization
+trick described further below.
+
+The built-in inversion tactic of Coq is not the only way to invert a
+hypothesis of an inductive type. The authors do not even mention the
+implementation of C. McBride unification-based BasicElim tactic in Coq
+(dependent destruction/induction). This tactic has been available
+since 2009 in Coq 8.2, it has a clearer and more elementary
+implementation and also improves on the size of proof terms generated
+by the standard inversion tactic. The general ideas behind BasicElim
+are presented in [McBride00] (I believe the implementation of
+inversion in Matita follows along the same lines). The authors should
+compare their technique to BasicElim.
+
+Section 4, which reports on the application of the methodology
+described in the paper to the proof of correctness of an ARM
+simulator, is slim on details and not very informative. A more
+thorough evaluation of the efficiency of the technique compared to
+available alternatives (e.g. Coq inversion and dependent destruction
+tactics) would make the case more convincing. The fact that the
+accompanying Coq development is badly documented does not help. I had
+no clue where to look for the results reported in Section 4. I finally
+managed with the help of grep to find the definition of the Ltac
+tactic "inv_eval_expr" in the file my_inversion/my_inversion.v,
+together with some examples of its use interleaved with pieces of
+commented code. I could not find alternative proofs using built-in Coq
+inversion and I was unable to accurately identify the lemmas (or
+fragments of lemmas) corresponding to the results reported in Table 1.
+
+I found the methodology described in the paper interesting, and I am
+convinced that it solves a practical shortcoming of the tactics that
+Coq provides for inverting inductively defined relations. However, the
+methodology still requires a siginificant initial effort and expertise
+in the Ltac language of Coq: in the accompanying development, more
+than 800 lines of Coq are needed to set up the necessary Ltac tactics
+used in the example described in Section 4, and the authors report
+that this took them around 2 weeks. I have the impression that the
+regularity of the technique could be exploited to automate much of
+this effort. All in all, I believe that, although the techniques the
+authors describe can significantly reduce the size of proof terms
+built using inversion, the methodology is not mature enough to be of
+use to a greater audience and will not really be appealing until some
+of the burden of setting up the necessary infrastructure is reduced.
+
+[McBride00] C. McBride. Elimination with a Motive. In Types for Proofs
+and Programs, TYPES'00, volume 2277 of Lecture Notes in Computer
+Science, pp. 197-216, Springer, 2002.
+
+Detailed comments
+=================
+
+p.5 
+
+You say that a case analysis on H yields a subgoal of the form diag (S
+(S y)) for an arbitrary natural number y. This is not entirely true,
+as you will have in the context the additional hypothesis "even_i y",
+which constrains y.
+
+p.7 
+
+You never say what "\mathcal{P}" stands for.
+
+p.8
+
+You mention that your Coq model of ARM is based on "the reference
+manual". Please specify which.
+
+p.10
+
+The Coq goal used as an example is hardly readable without some
+background on CompCert and your formalization of ARM instructions,
+although it certainly conveys how complex are the inductive relations
+you need to reason about.
+
+p.11
+
+When you talk about the ARM isntruction ADC, you should at least
+give an intuition of what it does.
+
+You mention that you needed more than two months to develop the first
+correctness proof for the ADC instruction, without using the
+techniques presented in the paper. Did you use the built-in inversion
+tactic of Coq or did you use some other different proof technique?
+This seems an unreasonable amount of time anyway. Was it a one-person
+effort? Was the developer already familiar with Coq and CompCert?
+
+Table 1 is not very informative. No units are given, so only a
+relative comparison is possible. No information about the size of the
+generated proof terms is given. Moreover, this is a very limited
+evaluation, and without further information it is impossible to
+reproduce or map to the snapshot of the development available for
+download.
+
+
+Typos and grammar errors
+========================
+
+p.2
+
+[DONE]"Note that, it may" -> remove comma
+
+[DONE]"in the Coq syntax" -> "in Coq syntax"
+
+[DONE]"this is no other option" -> "there is no other option"
+
+[DONE]"a n-ary" -> "an n-ary"
+
+[DONE]"If the relation non-deterministic" -> missing verb
+
+[?]"amounts to provide" -> "amounts to providing"
+
+p.3
+
+[DONE]"the better than" -> "better than"
+
+[DONE]"a a functional" -> "a functional"
+
+[DONE]"fails in seldom intricate cases" -> rephrase
+
+[DONE]"and sequel of the script depends" -> missing article
+
+[DONE]"in recent version of Coq" -> "in recent versions of Coq"
+
+p.4
+
+[DONE]"makes it is both" -> "makes it both"
+
+p.5
+
+[TODO]"E2 e ex" -> "E2 x ex"
+
+[DONE]"if n and P n are often clear from the context" -> rephrase
+
+[DONE]"Each of this goals" -> "Each of these goals"
+
+p.7
+
+[DONE]"is an output of type val is either nat or bool" -> rephrase
+
+p.8
+
+[DONE]"which is is" -> "which is"
+
+[DONE]"we provide first defined" -> rephrase
+
+p.9
+
+"In details" -> "In detail"
+
+[DONE]"expression like assignment or binary operation" -> rephrase
+
+[DONE]"A typical proof step start" -> "A typical proof step starts"
+
+[?]"result in a complete" -> "results in a complete"
+
+p.10
+
+[DONE]"every instruction proofs" -> rephrase
+
+[DONE]"altogether" -> "all together" or "together"
+
+[DONE]"a Ltac" -> "an Ltac"
+
+[DONE]"two memory state" -> "two memory states" 
+
+[DONE]"variables names" -> "variable names"
+
+p.11
+
+[DONE]"inv_eval_exprmm'" -> "inv_eval_expr m m'"
+
+[DONE]"because of allows us" -> rephrase
+
+[DONE]"the introduction suitable names" -> missing preposition
+
+[DONE]"Comparing development times is provides" -> rephrase
+
+[DONE]"Table 4" -> "Table 1"
+

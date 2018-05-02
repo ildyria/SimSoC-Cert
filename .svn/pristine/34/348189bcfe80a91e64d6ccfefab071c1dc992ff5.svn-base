@@ -1,0 +1,7 @@
+Title: Handcrafted Inversions Made Operational on Operational Semantics
+
+Abstract:
+
+When reasoning on formulas involving large-size inductively defined relations, such as the semantics of a real programming language, many steps require the inversion of a hypothesis. The built-in "inversion" tactic of Coq can then be used, but it suffers from severe controllability maintenance and efficiency issues, which makes it unusable in practice in large applications.
+To circumvent this issue, we propose a proof technique based on the combination of an antidiagonal argument and the impredicative encoding of inductive data-structures. We can then encode suitable helper tactics in LTac, yielding scripts which are much shorter (as well as corresponding proof terms) and, more importantly, much more robust against changes in version changes in the background software. This is illustrated on correctness proofs of non-trivial C programs according to the operational semantics of C defined in Compcert.
+

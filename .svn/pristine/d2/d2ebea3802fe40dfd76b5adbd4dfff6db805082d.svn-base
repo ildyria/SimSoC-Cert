@@ -1,0 +1,30 @@
+\begin{coqdoccode}
+\coqdocnoindent
+\coqdockw{Inductive} \coqdocvar{tm} : \coqdockw{Type} :=\coqdoceol
+\coqdocindent{1.00em}
+\ensuremath{|} \coqdocvar{tm\_const} : \coqdocvar{nat} \ensuremath{\rightarrow} \coqdocvar{tm}\coqdoceol
+\coqdocindent{1.00em}
+\ensuremath{|} \coqdocvar{tm\_plus} : \coqdocvar{tm} \ensuremath{\rightarrow} \coqdocvar{tm} \ensuremath{\rightarrow} \coqdocvar{tm}.\coqdoceol
+\coqdocemptyline
+\coqdocnoindent
+\coqdockw{Inductive} \coqdocvar{val} : \coqdockw{Type} :=\coqdoceol
+\coqdocindent{1.00em}
+\ensuremath{|} \coqdocvar{nval}  : \coqdocvar{nat} \ensuremath{\rightarrow} \coqdocvar{val}\coqdoceol
+\coqdocindent{1.00em}
+\ensuremath{|} \coqdocvar{bval}  : \coqdocvar{bool} \ensuremath{\rightarrow} \coqdocvar{val}.\coqdoceol
+\coqdocemptyline
+\coqdocnoindent
+\coqdockw{Inductive} \coqdocvar{eval} : \coqdocvar{tm} \ensuremath{\rightarrow} \coqdocvar{val} \ensuremath{\rightarrow} \coqdockw{Prop} :=\coqdoceol
+\coqdocindent{1.00em}
+\ensuremath{|} \coqdocvar{E\_Const} : \coqdockw{\ensuremath{\forall}} \coqdocvar{n},\coqdoceol
+\coqdocindent{3.00em}
+\coqdocvar{eval} (\coqdocvar{tm\_const} \coqdocvar{n}) (\coqdocvar{nval} \coqdocvar{n})\coqdoceol
+\coqdocindent{1.00em}
+\ensuremath{|} \coqdocvar{E\_Plus} : \coqdockw{\ensuremath{\forall}} \coqdocvar{t1} \coqdocvar{t2} \coqdocvar{n1} \coqdocvar{n2},\coqdoceol
+\coqdocindent{3.00em}
+\coqdocvar{eval} \coqdocvar{t1} (\coqdocvar{nval} \coqdocvar{n1}) \ensuremath{\rightarrow}\coqdoceol
+\coqdocindent{3.00em}
+\coqdocvar{eval} \coqdocvar{t2} (\coqdocvar{nval} \coqdocvar{n2}) \ensuremath{\rightarrow}\coqdoceol
+\coqdocindent{3.00em}
+\coqdocvar{eval} (\coqdocvar{tm\_plus} \coqdocvar{t1} \coqdocvar{t2}) (\coqdocvar{nval} (\coqdocvar{plus} \coqdocvar{n1} \coqdocvar{n2})).\coqdoceol
+\end{coqdoccode}

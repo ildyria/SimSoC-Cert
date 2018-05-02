@@ -1,0 +1,101 @@
+\chapter{Example: the proof script related to instruction ADC}
+\label{app:adc}
+
+Here we present Coq code on the main theorem stated for ARM instruction ADC.
+There are 3 memory state transitions for the concrete model.
+First, from \texttt{m0} to \texttt{m1}, the parameters of
+ADC is allocated.
+Second, from \texttt{m1} to \texttt{m2}, the parameters are initialized.
+From this memory state \texttt{m2}, we are able to build the projection to
+the abstract model for processor state \texttt{proc} and other parameters.
+Then, from \texttt{m2} to \texttt{mfin}, the statement of ADC function body
+is executed.
+The new abstract state is \texttt{S.ADC\_step sbit cond d n so (mk\_semstate nil true s)}. It is expected to be related to \texttt{mfin} in the concrete model.
+
+\begin{alltt}
+
+Theorem related_aft_ADC: forall e m0 m1 m2 mfin vargs s out sbit cond d n so,
+  alloc_variables empty_env m0 (fun_internal_ADC.(fn_params) ++ 
+                                fun_internal_ADC.(fn_vars)) e m1 ->
+  bind_parameters e m1 fun_internal_ADC.(fn_params) vargs m2 ->
+  (forall m ch b ofs, Mem.valid_access m ch b ofs Readable) ->
+  proc_state_related proc m2 e (Ok tt (mk_semstate nil true s)) ->
+  sbit_func_related m2 e sbit ->
+  cond_func_related m2 e cond ->
+  d_func_related m2 e d ->
+  n_func_related m2 e n ->
+  so_func_related m2 e so ->
+  exec_stmt (Genv.globalenv prog_adc) e m2 fun_internal_ADC.(fn_body) 
+    Events.E0 mfin out ->
+  proc_state_related proc mfin e 
+    (S.ADC_step sbit cond d n so (mk_semstate nil true s)). 
+
+\end{alltt}
+
+The proof script for theorem \texttt{related\_aft\_ADC} is too long to
+be present here ($\sim 600$ loc).
+Instead of showing the whole script,
+we choose one of the lemmas used to support the proof
+of \texttt{related\_aft\_ADC}: \texttt{same\_copy\_SR}.
+
+Before stating a lemma, 
+in order to shorten the proof script and its readability,
+we give a name to the expression we focus on for the lemma.
+
+The name \texttt{cp\_SR} is given to the ASTs of C expression:
+\begin{alltt}
+ copy_StatusRegister(&proc->cpsr, spsr(proc))
+\end{alltt}
+In this expression, we have two function calls to \texttt{spsr} 
+and \texttt{copy\_StatusRegister}.
+
+\begin{alltt}
+Definition cp_SR :=
+  (Ecall
+    (Evalof (Evar copy_StatusRegister T32) T32)
+    (Econs
+      (Eaddrof
+        (Efield
+          (Evalof
+            (Ederef 
+              (Evalof (Evar proc T2) T2) T8)
+            T8) cpsr T9) T25)
+      (Econs
+        (Ecall (Evalof (Evar spsr T33) T33)
+          (Econs (Evalof (Evar proc T2) T2)
+            Enil) T25) Enil)) T10).
+\end{alltt}
+
+The Lemma states that the evaluation results of expression \texttt{cp\_SR} in
+the abstract model and the concrete model are equivalent.
+
+\begin{alltt}          
+Lemma same_copy_SR :
+  forall e m l b s t m' v em,
+    proc_state_related m e (Ok tt (mk_semstate l b s)) ->
+    eval_expression (Genv.globalenv prog_adc) e m cp_SR t m' v ->
+    proc_state_related m' e
+      (Ok tt (mk_semstate l b
+      (Arm6_State.set_cpsr s (Arm6_State.spsr s em)))).
+Proof.
+  intros until em. intros psrel cpsr.
+  inversion cpsr. subst. rename H into ee,H0 into esrv. unfold cp_SR in ee.
+  inv_eval_expr m m'.
+  (* Function spsr, get spsr from the current state *)
+  apply (same_spsr e l b s vf0 fd0 m vargs0 t10 m3 vres0 l b s)
+    in psrel; [idtac|exact Heqff0|exact ev_funcall].
+  (* Function copy_StatusRegister, copy the current spsr to cpsr*)
+  apply (same_copy e l b s vf fd m3 vargs t2 m' vres l b
+    (Arm6_State.set_cpsr s (Arm6_State.spsr s em))) in psrel;
+  [idtac|exact Heqff|exact ev_funcall0].
+  exact psrel.
+Qed.
+\end{alltt}
+
+
+
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "thesis"
+%%% End: 

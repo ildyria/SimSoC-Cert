@@ -1,0 +1,166 @@
+\section{ARM Model}
+\label{sec:armmodel}
+
+
+\subsection{Processor Behavior}
+A processor is essentially a transition system which operates
+on a state composed of 
+registers (including the program counter) and memory.
+The semantics of its behavior amounts to repeat the following tasks:
+fetch the binary code at a given address,
+decode it as a processor operation and execute it;
+the last task includes the computation of the address 
+of the next operation.
+The two main components of a processor simulator are then:
+\begin{itemize}
+\item The decoder, which, given a binary word, 
+  retrieves the name of an operation and its potential arguments.
+\item
+  The precise description of transformations performed by
+  an operation on registers and memory.
+  In the reference manual of ARM, this is defined by
+  an algorithm written in ``pseudo-code'' 
+  which calls low-level primitives for, e.g., 
+  setting a range of bits of a register to a given value.
+  Some situations are forbidden or left unspecified.
+  For  ARM processors, this results in
+  a so-called ``UNPREDICTABLE'' state.
+  The best choice, for a simulator, is then to stop with
+  a clear indication of what happens.
+\end{itemize}
+
+Let us illustrate this on a concrete example.
+Here is the original pseudo-code of the \texttt{ADC} (add with carry) operation of ARMv6.
+% (at the internal OCaml representation step).
+As most operations of ARM, 
+this operation has an argument called \texttt{cond} which
+indicates whether the operation should be skipped or not.
+\texttt{CPSR} (Current Program Status Register)
+and 
+\texttt{SPSR} (Saved Program Status Register, used for exception handling)
+are special registers related to execution modes of ARM;
+they also contain flags (\texttt{N}, \texttt{Z}, \texttt{C} and \texttt{V}) 
+relevant to arithmetic instructions.
+The instruction has four parameters:
+\texttt{S} is a bit which specifies 
+that the instruction updates \texttt{CPSR},
+\texttt{Rn} is a register for the first operand,
+\texttt{Rd} is the destination register,
+\texttt{shifter\_operand} specifies the second operand
+according to a (rather complicated) addressing mode.
+
+% JF -> FT: ADC ici (plus exact), mais ADC_pseudocode par la suite,
+% CF "In the sequel... below"
+\begin{humC}
+A4.1.2 ADC
+    if ConditionPassed(cond) then
+        Rd = Rn + shifter_operand + C Flag;
+        if S == 1 and d == 15 then
+            if CurrentModeHasSPSR() then
+                CPSR = SPSR;
+            else UNPREDICTABLE
+        else if S == 1 then
+            N Flag = Rd[31];
+            Z Flag = if Rd == 0 then 1 else 0;
+            C Flag = CarryFrom(Rn + shifter_operand + C Flag);
+            V Flag = OverflowFrom(Rn + shifter_operand + C Flag);
+\end{humC}
+\noindent
+In the sequel, this version of \texttt{ADC} is referred to as
+\texttt{ADC\_pseudocode}.
+ 
+% TODO: not the right place for this remark, to be expanded
+% according to input of Xiaomu.}
+% For a formal model of the processor, 
+% states and transformations are specified
+% using simple inductive types and functions.
+% The strongly normalizing setting of Coq is fine
+% since all transformations terminate.
+% %
+% For a simulator such as \simlight, 
+% states and transformations are programmed
+% using efficient (and redundant) data structures
+% and imperative programs.
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Coq Semantics of ARM Operations}
+\label{s:sem-ARM}
+%\subsubsection{General Structure.}
+
+Each operation $O$ from the reference manual is mechanically translated 
+to a corresponding Coq function named $O$\verb|_Coq|.
+First we define a type 
+\texttt{state}, which is a record with
+two fields \texttt{Proc} and \texttt{SCC} (System Control Coprocessor)
+containing respectively the components related to the main processor
+(status register \texttt{CPSR}, \texttt{SPSR}, other registers...) 
+and the corresponding components related to the coprocessor,
+as well as the ARM memory model.
+%
+Then we use a monadic style~\cite{peyton-jones-tackling-09} in order to take 
+the sequentiality of transformations on the state into account.
+Beyond the state \texttt{st}, two other pieces of information are handled:
+\texttt{loc}, which represent local variables of the operation
+and \texttt{bo}, a Boolean indicating whether the program counter
+should be incremented or not;
+%
+% Something to say on the \emph{addressing mode} ?
+%
+\noindent
+they are registered in the following record
+which is used for defining our monad:
+\begin{coq}
+Record semstate := mk_semstate
+  \{ loc : local
+  ; bo : bool
+  ; st : state \}.
+
+Inductive result \{A\} : Type :=
+| Ok (_ : A) (_ : semstate)
+| Ko (m : message)
+| Todo (m : message).
+
+Definition semfun A := semstate -> @result A.
+\end{coq}
+\noindent
+Note that in general, every $O$\verb|_Coq| functions terminate with \texttt{Ok} as value. However for ``UNPREDICTABLE'' states for example, errors are implicitely propagated with our monadic constructors for exceptions : \texttt{Ko} and \texttt{Todo}.
+
+We present now the translation of \texttt{ADC\_pseudocode}.
+To this effect, we introduce \texttt{\_get\_st}, a monadic function
+giving access to the current state \texttt{st} in its body, represented by
+this notation:
+\begin{coq}
+Notation "'<' st '>' A" := (_get_st (fun st => A)) 
+  (at level 200, A at level 100, st ident).
+\end{coq}
+
+\noindent
+This yields the following code for \texttt{ADC\_Coq}:
+\begin{coq}
+(* A4.1.2 ADC *)
+Definition ADC_Coq
+   (S : bool) (cond : opcode)
+   (d : regnum) (n : regnum) (shifter_operand : word) : semfun _ := <s0>
+ if_then (ConditionPassed s0 cond)
+   ([ <st> set_reg d (add (add (reg_content s0 n) shifter_operand)
+                               ((cpsr st)[Cbit]))
+   ;If (andb (zeq S 1) (zeq d 15))
+     then    (<st> if_CurrentModeHasSPSR (fun em =>
+       (<st> set_cpsr (spsr st em))))
+     else         (if_then (zeq S 1)
+       ([ <st> set_cpsr_bit Nbit ((reg_content st d)[n31])
+       ; <st> set_cpsr_bit Zbit (if zeq (reg_content st d) 0 then repr 1 
+                                 else repr 0)
+       ; <st> set_cpsr_bit Cbit
+                 (CarryFrom_add3 (reg_content s0 n) shifter_operand
+                                 ((cpsr st)[Cbit]))
+       ; <st> set_cpsr_bit Vbit (OverflowFrom_add3 (reg_content s0 n)
+                                shifter_operand ((cpsr st)[Cbit])) ]))\,]).
+\end{coq}
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "cpp"
+%%% End: 

@@ -1,0 +1,5 @@
+Vania:
+
+Compcert-C tombe un peu du ciel. Il faudrait une presentation
+de Compcert de quelques lignes pour expliquer que l'on re-utilise
+les developpements Coq de compcert.

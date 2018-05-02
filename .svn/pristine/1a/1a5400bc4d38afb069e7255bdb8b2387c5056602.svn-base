@@ -1,0 +1,276 @@
+\svnidlong
+{$HeadURL$}
+{$LastChangedDate$}
+{$LastChangedRevision$}
+{$LastChangedBy$}
+
+% Author: \svnfileauthor; Revision: \svnfilerev; Last changed on: \svnfiledate; 
+% URL: \url{\svnkw{HeadURL}}
+
+\begin{thoughts}
+\itshape
+\hfil -----------------------------------------------------------------------------------\par
+\hfil \textbf{Changes on \currfilename}
+
+Author: \svnfileauthor; Revision: \svnfilerev; Last changed on: \svnfiledate
+\end{thoughts}
+
+% svn propset svn:keywords 'LastChangedBy LastChangedRevision LastChangedDate HeadURL' thisfile.tex
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Handling Successful Cases}
+\label{sec:improvement}
+
+
+%\vspace*{-.7\baselineskip}
+% Let us now consider what happens if $H$ is 
+% $\eveni\;3$ instead of $\eveni\;1$. 
+% As mentioned in the introduction, 
+% a first inversion on $H$ will push $\eveni\;1$ in the environment, 
+% and then we are back to the previous situation.
+% In \cite{small_inv} we show that in such situations 
+% the goal can be proved in a different way, by keeping
+% the same diagonal function in the whole process.
+% Here the conclusion is convertible to $\diag\;3$ with:
+
+% \coqdocinput{chunk26}
+
+% \vspace*{-.7\baselineskip}
+% \noindent
+% Then the case analysis on $H$ leaves a subgoal for \ET,
+% since 3 matches $(S\: (S\:n))$.
+% That is, we have to prove 
+% $\diag\;(S\: (S\:y))$ with an additional hypothesis $Hy: \eveni\;y$.
+% A case analysis on $Hy$ yields two subgoals:
+% $\diag\;2$ and $\diag\;(S\: (S\: (S\: (S\:z))))$,
+% because $y$ is either $0$ or $(S\: (S\:z))$, and
+% these 2 subgoals reduce to \True.
+
+% This strategy works for arbitrary large odd values,
+% see \cite{small_inv} for more complex examples.
+% Measurements on the corresponding proof terms showed
+% that their size is 1 to 2 orders of magnitude smaller
+% than with the standard \inversion of Coq.
+
+% However, 
+% the technique explained in the previous subsection 
+% has to be extended in order to cover more general
+% situations. 
+
+A first easy improvement makes \diag independent
+from the conclusion.
+To this effect, we replace it with $(\forall X, X)$ 
+in the first branch of \diag.
+In our previous example, this yields
+
+\vspace*{.5\baselineskip}
+
+\coqdocinput{chunk27}
+
+\noindent
+Then the previous proof term 
+(\match $H$ \intac $\eveni\;n$ \retac $\diag\;n$ \with 1 $\ldots$)
+has the type $\forall X, X$
+and then can be successfully applied to any current conclusion.
+Alternatively, we can define a general function as follows:
+
+%\vspace*{.5\baselineskip}
+
+\smallskip
+\coqdocinput{chunk29}
+
+
+\medskip\noindent
+Next consider the following theorem:
+
+\smallskip
+\coqdocinput{chunk28}
+\smallskip
+
+\noindent
+The proof is by induction on $\eveni\;n$.
+In the inductive step, we have to prove $\eveni\;m$
+from the induction hypothesis $\eveni\:(n + m) \rightarrow \eveni\;m$
+and a new hypothesis $H: \eveni\: (S\: (S\: (n + m)))$.
+Intuitively, we want to invert $H$ in order to push $\eveni\:(n + m)$
+in the environment. 
+% The trick given at the end of Section~\ref{sec:absurd}
+% is then of no help.
+We can then adapt \prone as follows:
+
+\smallskip
+\coqdocinput{chunk30}
+
+\noindent
+Then, applying \prET to $H$ yields a function in continuation passing style.
+Its type parameter $X$ is automatically identified to the conclusion
+$\eveni\;m$, while $y$ is bound to $n+m$,
+so that we get a new goal $\eveni\:(n+m) \rightarrow \eveni\;m$.
+That is, we have exactly the expected inversion.
+Functions such as \prone and \prET can be seen as inversion
+lemmas, but note that their type is the dependent type
+expressed by their own \diag.
+\medskip
+
+More generally,
+let us then invert an hypothesis $H$ having the type $A\: \mathcal{P}$
+where $A(u)$ is an inductive type with index $u:U$
+and $\mathcal{P}:\;U$ is an expression made
+of constructors in the type $U$.
+%
+%In the case of an inductive type $A(u)$ with index $u:U$,
+Given a constructor of type $\forall \mathbf{p}, A \;p$, 
+where $\mathbf{p}$ is a telescope 
+%and $\mathcal{P}:\;U$ is an expression made of constructors in the type $U$,
+we proceed similarly:
+the \match of \diag has a first branch filtering $\mathcal{P}$
+and returning 
+$\forall X: Prop, (\forall \mathbf{p}, X) \rightarrow X$.
+If $n$ constructors are possible for $A \:\mathcal{P}$,
+say respectively $C_1: \forall \mathbf{p_1}, A \:\mathcal{P}$,
+$\ldots$, and $C_n: \forall \mathbf{p_n}, A \:\mathcal{P}$,
+the inverting lemma corresponding to $A \:\mathcal{P}$ will be:
+
+\smallskip
+\coqdocinput{chunk19}
+\smallskip
+
+\noindent
+Remark the close relationship with the impredicative encoding
+of data-types in system F.
+
+
+\subsection{Dealing with Constrained Arguments}
+\label{sec:constrained-args}
+
+The next stage to be considered is the case of
+an inductive type with more than one index.
+This raises new issues, because additional identities
+between arguments of the premises or the conclusion
+of a constructor may occur.
+This happens routinely in the inductive definitions
+for the operational semantics of C provided by CompCert.
+In order to explain the problems and how to deal with
+them in our framework, 
+we introduce a toy language, together with
+an inductively defined evaluation rule $eval$ having two indexes:
+the first one is the input type $tm$, $tm\_const$ and $tm\_plus$ are the
+expected cases in pattern matching;
+the second index is an output of type $val$, which is either nat or bool.
+%and it is the extra variable we have to deal with.
+
+\medskip
+\coqdocinput{chunk31}
+\medskip
+
+In constructor $E\_Plus$,
+the two premises share the variables $t1, t2, n1, n2$ with the
+conclusion. 
+If we use the last solution 
+with continuation passing style, as it is presented above,
+we are able to keep the premises 
+but the relationship between the output values
+as specified in the inductive definition will be lost
+in the generated subgoal.
+%
+This issue is handled using an additional argument to $X$ 
+corresponding to the second index of the inductive relation.
+The function for extracting the premises of $E\_Plus$ is:
+
+\medskip
+\coqdocinput{chunk34}
+\medskip
+
+\noindent
+Now, consider the following examples.
+
+\smallskip
+\coqdocinput{chunk38}
+\medskip
+%
+\noindent
+In $\coqdocvar{ex1}$, by applying $pr\_plus\_1$, 
+$v$ will be equated to $nval~(plus~n1~n2)$ 
+according to the rule specified by $E\_plus$.
+%
+In $\coqdocvar{ex2}$,
+we need to analyze at the same time the two arguments of $eval$.
+The corresponding premises are extracted using a function $pr\_plus\_1\_2$
+having the same body as $pr\_plus\_1$, but whose type is:
+
+\medskip
+\coqdocinput{chunk39}
+\medskip
+%
+\noindent
+A similar situation happens with $E\_Const$ in the 
+two previous examples.
+%subgoals generated for $\coqdocvar{ex1}$ and $\coqdocvar{ex2}$.
+% to be handled with a corresponding inverting function $pr\_const\_1\_2$.
+
+% \medskip
+% Defining an inverting function for each constructor 
+% is flexible and convenient for debugging.
+% An elegant alternative\footnote{%
+% We want to thank the anonymous reviewer who offered this remark.}
+% is to merge all of them into a unique
+% inverting function managing all cases of the argument(s) under focus.
+% For instance, an exhaustive inverting function $pr\_eval\_1\_2$ 
+% suitable for $\coqdocvar{ex2}$ has the type:
+
+\medskip
+Defining an inverting function for each constructor 
+is most convenient for debugging.
+However the method is flexible and several such functions can be merged.
+In particular, 
+an elegant alternative\footnote{%
+We want to thank the anonymous reviewer who offered this remark.}
+is to provide a unique
+inverting function managing all cases of the argument(s) under focus.
+For instance, an exhaustive inverting function $pr\_eval\_1\_2$ 
+suitable for $\coqdocvar{ex2}$ has the type:
+
+\medskip
+\coqdocinput{chunk33}
+\medskip
+
+Full definitions as well as additional examples can be found on-line~\cite{hci:examples}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Beating \inversion}
+\label{sec:finset}
+
+Let us consider now a predicate defined on a dependent type.
+We take intervals $[1...n]$, formalized as $t$ in the standard library \texttt{Fin},
+then we restrict them to have an odd length.
+
+\medskip
+\coqdocinput{chunk60}
+\medskip
+
+\noindent
+Finding the premises for the second constructor is a function 
+similar to the one provided for $E2$ above:
+
+\medskip
+\coqdocinput{chunk61}
+\medskip
+
+\noindent
+In particular we can easily prove:
+
+\medskip
+\coqdocinput{chunk62}
+\medskip
+
+\noindent
+Standard \inversion happens to fail here.
+Note that BasicElim may work (we actually could not succeed)
+but would need an additional axiom related to John Major equality.
+
+
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "itp13"
+%%% End: 

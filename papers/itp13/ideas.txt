@@ -1,0 +1,61 @@
+----------------------------------------------------------------------
+
+JF:
+
+Present chunk1 (Coq syntax) to say that rule names (constructors)
+are functions taking premises (and parameters) as arguments.
+
+----------------------------------------------------------------------
+
+We present a inverting tactic in Coq proof system, in order to avoid
+disadvantage caused by the built-in tactic "inversion".In a large
+proof program (SimSoC-Cert), we found using “inversion” is time
+consuming and hard to control, due to the big term and irrelevant
+notion it generates for those intuitive cases. It is necessary to have
+a more efficient tactic. Our inversion focus only on the structure of
+an inductive type.Its strategy is easy to follow and the proof scripts
+are short. it is already tested and implemented in SimSoC-Cert
+project. This paper describes how is our inversion defined and it's
+performance.
+
+----------------------------------------------------------------------
+
+
+Compilation time of correctness proof on instruction BL.
+Original inversion:
+coqc correctness_BL_oldinv.v  14.90s user 0.39s system 99% cpu 15.310 total
+Our inversion:
+coqc correctness_BL.v  8.83s user 0.45s system 98% cpu 9.394 total
+
+----------------------------------------------------------------------
+
+Timing on inverting an assignment expression (Eassign).
+Original inversion:
+Finished transaction in 1. secs (0.128008u,0.s)
+New inversion:
+Finished transaction in 0. secs (0.036003u,0.s)
+
+
+More timing results:
+Using old inversion to find relation between m and m'
+Finished transaction in 1. secs (1.192075u,0.020002s)
+Using our inversion to find relation between m and m'
+Finished transaction in 1. secs (0.268017u,0.s)
+Using old inversion on eval_expr Ebinop
+Finished transaction in 0. secs (0.104006u,0.s)
+Using our inversion on eval_expr Ebinop
+Finished transaction in 0. secs (0.020002u,0.s)
+Using old inversion on eval_expr Evalof
+Finished transaction in 0. secs (0.096006u,0.s)
+Using our inversion on eval_expr Evalof
+Finished transaction in 0. secs (0.020001u,0.s)
+Using old inversion on eval_expr Evar
+Finished transaction in 0. secs (0.108007u,0.s)
+Using our inversion on eval_expr Evar
+Finished transaction in 0. secs (0.024001u,0.s)
+Using old inversion on eval_expr Eval
+Finished transaction in 0. secs (0.116007u,0.s)
+Using our inversion on eval_expr Eval
+Finished transaction in 0. secs (0.020001u,0.s)
+
+----------------------------------------------------------------------

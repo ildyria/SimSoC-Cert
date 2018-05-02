@@ -1,0 +1,134 @@
+\section{Auxiliary diagonalization function}
+\label{sec:absurd}
+
+We illustrate here the main results of \cite{small_inv}
+on the example of even numbers.
+Here is the corresponding Coq inductive definition.
+
+\medskip
+\coqdocinput{chunk21}
+\medskip
+
+\noindent
+We see that each rule is given by a constructor in a dependent data type
+-- also called an inductive predicate or relation because its sort is \Prop.
+Therefore, the elementary way to decompose an object of type \eveni $n$
+is to use dependent pattern matching.
+This is already done by primitive tactics of Coq
+such as \coqdockw{case} and \coqdockw{destruct},
+which turn out to be powerful enough in many situations, 
+when a condition is satisfied:
+the conclusion of the current goal fits all arguments of 
+the hypothesis to be analyzed by pattern matching.
+
+Let us first illustrate 
+dependent pattern matching on even numbers.
+Consider a proof $\PROOFEV$ of type $\eveni\;n$
+for some natural number $n$.
+For each possible constructor, \EZ or \ET, 
+we provide a proof term,
+respectively $t_\EZ$ and $t_\ET$.
+As usual, this term may depend on the arguments 
+of the corresponding constructor,
+none for \EZ and, say $x$ and $ex$ for \ET.
+More importantly for us, $t_\EZ$ and $t_\ET$ may have
+different \emph{types}:
+the type $P\;n$ of the whole expression depends on $n$;
+in the first branch, the type of $t_\EZ$ is $P\;0$ and
+in the second branch, the type of $t_\ET$ is $P\; (S\: (S\:x))$.
+Therefore, the syntax of the \coqdockw{match} construct
+contains a \coqdockw{return} clause with the expected type
+of the result $P\;n$ as an argument;
+moreover, 
+there is also an \coqdockw{in} clause for the type of $\PROOFEV$
+which binds $n$:
+% moreover, in order to say where this $n$ comes from,
+% there is also an \coqdockw{in} clause for the type of $\PROOFEV$:
+
+\coqdocinput{chunk22}
+\medskip
+
+\noindent
+Most of the time, Coq users do not need to go to this
+level of detail: 
+in interactive proof mode, 
+if $n$ and $P\;n$ are often clear from the context,
+\casetac $\PROOFEV$ will do the job.
+More precisely, if we have an hypothesis $H$ of type $\eveni\;n$
+and a desired conclusion of type $P\;n$, 
+\casetac $H$ will construct a proof term having the previous
+shape and answer with two new subgoals:
+one for $P\;0$ and one for $P\; (S\: (S\:x))$,
+with $\eveni\;x$ as an additional assumption.
+
+More work is needed precisely when there is no obvious relationship
+between the conclusion and the hypothesis to be analyzed.
+This happens in particular when $H$ is absurd:
+the goal should be discharged whatever is its conclusion.
+This situation is covered in \cite{small_inv} as follows:
+the conclusion is converted 
+to an expression \diag $V$,
+where $V$ is a value coming from $H$ 
+and \diag a suitable diagonal function, such that
+the dependent case analysis on $H$ provides only trivial subgoals.
+In \cite{small_inv}, we take the type of $H$ itself as a trivial
+subgoal but here we will take \True.
+For example, assume that we want to conclude
+$4=7$ from the hypothesis $H: \eveni\;1$.
+Our diagonal function is then defined as follows.
+
+\coqdocinput{chunk24}
+
+\vspace*{-.7\baselineskip}
+\noindent
+Then the conclusion is converted to $\diag\;1$,
+and the case analysis on $H$ 
+automatically provides two subgoals $\diag\;0$
+and $\diag\;(S\: (S\:y))$ for an arbitrary natural number $y$.
+Each of this goals reduces to \True, 
+and we are done.
+The proof term behind this reasoning is very short
+($I$ is the standard proof of \True):
+
+\coqdocinput{chunk25}
+
+\vspace*{-.7\baselineskip}
+Let us now consider what happens if $H$ is 
+$\eveni\;3$ instead of $\eveni\;1$. 
+As mentioned in the introduction, 
+a first inversion on $H$ will push $\eveni\;1$ in the environment, 
+and then we are back to the previous situation.
+In \cite{small_inv} we show that in such situations 
+the goal can be proved in a different way, by keeping
+the same diagonal function in the whole process.
+Here the conclusion is convertible to $\diag\;3$ with:
+
+\coqdocinput{chunk26}
+
+\vspace*{-.7\baselineskip}
+\noindent
+Then the case analysis on $H$ leaves a subgoal for \ET,
+since 3 matches $(S\: (S\:n))$.
+That is, we have to prove 
+$\diag\;(S\: (S\:y))$ with an additional hypothesis $Hy: \eveni\;y$.
+A case analysis on $Hy$ yields two subgoals:
+$\diag\;2$ and $\diag\;(S\: (S\: (S\: (S\:z))))$,
+because $y$ is either $0$ or $(S\: (S\:z))$, and
+these 2 subgoals reduce to \True.
+
+This strategy works for arbitrary large odd values,
+see \cite{small_inv} for more complex examples.
+Measurements on the corresponding proof terms show
+that their size is 1 to 2 orders of magnitude smaller
+than with the standard \inversion of Coq.
+
+
+% \medskip
+% \coqdocinput{chunk23}
+% \medskip
+
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "cpp12"
+%%% End:

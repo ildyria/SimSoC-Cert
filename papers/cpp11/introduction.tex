@@ -1,0 +1,208 @@
+\section{Introduction}
+\label{sec:intro}
+
+\subsection{Simulation of Systems-on-Chip}
+
+Systems-on-Chip (SoC), used in devices such as smart-phones, contain both
+hardware and software. A part of the software is generic and can be used with
+any hardware systems, and thus can be developed on any computer. In contrast,
+developing and testing the SoC-specific code can be done only with this SoC, or
+with a \emph{software executable model} of the SoC. 
+To reduce the time-to-market, the software development must start
+before the hardware is ready. Even if the hardware is available,
+simulating the software on a model provides more debugging
+capabilities.
+%
+The %most abstract and 
+fastest simulators use native simulation.
+%
+The software of the \emph{target} system (i.e., the SoC) is compiled with
+the normal compiler of the computer running the simulator, 
+but linked with special system
+libraries. Examples of such simulators are the Android and iOS
+SDKs.
+
+In order to develop low-level system code, one needs a simulator that
+can take the real binary code as input. Such a simulator requires a
+model of the processor and of its peripherals (such as UART, DMA,
+Ethernet card, etc). When simulating a smart-phone SoC, this kind of
+functional simulator can be from 1 to 100 times slower than the real
+chip.
+%
+These simulators have other uses, for example, as
+reference models for the hardware verification.
+An error in the simulator can then mislead both the software and the hardware
+engineers.
+QEMU~\cite{qemu} is an open-source processor emulator
+coming with a set of device models; it can simulate several
+operating systems. Other open-source simulators include
+UNISIM~\cite{unisim} (accurately-timed)
+and
+SimSoC~\cite{ossc09}, developed by some colleagues, %at LIAMA 
+which is loosely-timed (thus faster).
+Simics~\cite{simics} is a commercial alternative.
+%
+The usual language to develop such simulators is C++, combined with
+the SystemC~\cite{systemc-lrm} and OSCI-TLM~\cite{tlm-osci}
+libraries.
+
+\medskip
+The work reported here is related to SimSoC.
+
+\subsection{The Need for Certification}
+
+Altogether, a functional simulator is a complex piece of software.
+SimSoC, which is able to simulate Linux both on ARM and PowerPC
+architectures at a realistic speed
+(over 10 Millions of instructions per second per individual core), 
+includes about 60,000 lines of C++
+code. The code uses complex features of the C++ language and of the
+SystemC library. Moreover, achieving high simulation speeds requires
+complex optimizations, such as dynamic translation~\cite{qemu}.
+
+This complexity is problematic, because beyond speed,
+\emph{accuracy} is required:
+all instructions have to be simulated
+exactly as described in the documentation.
+There is a strong need to strengthen the confidence that
+simulations results match the expected accuracy. 
+Intensive tests are a first answer.
+For instance, as SimSoC is able to run a Linux kernel
+on top of a simulated ARM, we know that many situations are covered.
+However it turned out, through further experiments, that it was not
+sufficient: wrong behaviors coming from rare instructions
+were observed after several months.
+%
+Here are the last bugs found and fixed by the SimSoC team while trying to boot
+Linux on the SPEArPlus600 SoC simulator.
+\begin{itemize}
+\item After the execution of an \texttt{LDRBT} instruction, the contents of the
+  base register (\texttt{Rn}) was wrong. It was due to a bug in the reference
+  manual itself; the last line of the pseudo-code has to be deleted.
+\item After a data abort exception, the base register write-back was not
+  canceled.
+\item Additionally, a half-word access to an odd address while
+  executing some SPEArPlus600 specific code was not properly handled. 
+\end{itemize}
+
+Therefore we propose here to certify the simulator,
+that is, to prove, using formal methods --
+here: the Coq proof assistant \cite{coqmanual,coqart} --
+that it conforms to the expected behavior.
+
+This is a long term goal.
+Before going to the most intricate features of a simulator such as SimSoC,
+basic components have to be considered first.
+We then decided to focus our efforts on a sensible and important 
+component of the system: the CPU part of the ARMv6 architecture 
+(used by the ARM11 processor family).
+%
+This corresponds to a specific component of the SimSoC simulator,
+which was previously implementing the ARMv5 instruction set only.
+Rather than certifying this component, it seemed to us more feasible
+to design a new one directly in C, in such a way that it can be
+executed alone, or integrated in SimSoC (by including the C code in
+the existing C++ code).
+%
+We call this new component \simlight \cite{rapido11}. Combined with a small
+\texttt{main} function, \simlight can simulate ARMv6 programs as long
+as they do not access any peripherals (excepted the physical memory)
+nor coprocessors. There is no MMU (Memory Management Unit) yet. Integrating it in SimSoC just
+requires to replace the memory interface and to connect the interrupts
+(IRQ and FIQ) signals.
+
+\smallskip
+The present paper reports our first efforts 
+towards the certification of \simlight.
+We currently have a formal description of the ARMv6 architecture,
+a running version of \simlight,
+and we are in the way of performing correctness proofs.
+The standard way for doing this is to use Hoare logics
+or a variant thereof.
+Various tools exist in this area, 
+for example Frama-C \cite{frama-c}.
+We chose to try a more direct way,
+based on an operational semantics of C;
+more precisely the semantics of Compcert-C defined in the Compcert project
+\cite{Leroy-Compcert-CACM}.
+One reason
+is that we look for a tight control on the formulation of proof obligations
+that we will have to face.
+Another advantage is that we can consider the use of
+the certified compiler developed in Compcert,
+and get a very strong guarantee on the execution of 
+the simulator (but then, sacrificing speed to some extent\footnote{%
+According to our first experiments, \simlight compiled with Compcert
+is about 50~\% to 70~\% slower than \simlight compiled with \texttt{gcc -O0}.
+%It is indeed interesting : by running natively without any simulation, 
+%we got a faster executable with Compcert~!
+}).
+
+Another interesting feature of our work is that 
+the most tedious (hence error prone) part of the formalization --
+the specification of instructions --
+is automatically derived from the reference manual.
+It is well known that the formal specification of such big applications
+is the main weak link in the whole chain.
+Though our generators cannot be proved correct, because the statements
+and languages used in the reference manual have no formal semantics,
+we consider this approach as much more reliable than a manual formalization.
+Indeed, a mistake in a generator will impact several or all operations,
+hence the chances that it will be detected through a visibly wrong behavior
+are much higher than with a manual translation,
+where a mistake will impact only one (eventually rarely used) operation.
+
+Note that after we could handle the full set of ARM instructions,
+our colleagues of the SimSoC team decided to use the same technology
+for the SimSoC itself:
+the code for simulating instructions in \simlight,
+i.e., the current component dedicated to the ARM v6 CPU in SimSoC,
+is automatically derived using a variant of our generator,
+whereas the previous version for ARM v5 was manually written \cite{rapido11}.
+
+
+Fig.~\ref{fig:archi} describes the overall architecture. 
+The contributions of the work presented in this paper are 
+the formal specification of the ARMv6 instruction set
+and the correctness proof of a significant operation.
+More precise statements on the current achievements 
+are given in the core of the paper.
+ 
+\smallskip
+\emph{Related Work.}
+A fully manual formalization of the fm8501 and ARMv7 architectures are reported
+in \cite{fm8501} and \cite{FoxM10}. 
+The formal framework is respectively ACL2 and HOL4 instead of Coq, 
+and the target is to prove that the hardware or microcode implementation of 
+ARM operations are correct wrt the ARM specification.
+Our work is at a different level:
+we want to secure the simulation of programs using ARM operations.
+% and no specific target is considered, whereas we are driven by the needs of
+% simulation of ARMv6 and 
+Another major difference is the use of automatic generation 
+from the ARM reference manual in our framework,
+as stated above.
+
+\medskip
+The rest of the paper is organized as follows.
+Section \ref{sec:overallarchi}
+presents the overall architecture of \simlight
+and indicates for which parts of \simlight 
+formal correctness is currently studied.
+A informal statement of our current results is also
+provided there.
+Sections \ref{sec:armmodel} and \ref{sec:simlight}
+present respectively our Coq formal reference model of ARM
+and the (Coq model of) Compcert-C programs targeted for correctness.
+A precise statement of our current results and indications on the proofs are 
+given in Section \ref{sec:results}.
+We conclude in Section \ref{sec:conclusion} with some hints on
+our future research directions.
+Some familiarity with Coq is assumed in 
+Sections \ref{sec:armmodel}, \ref{sec:simlight} and~\ref{sec:results}.
+
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "cpp"
+%%% End: 

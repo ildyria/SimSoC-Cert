@@ -1,0 +1,277 @@
+
+----------------------- REVIEW 1 ---------------------
+PAPER: 31
+TITLE: Certified Faithful Simulation
+AUTHORS: Vania Joloboff, Jean Francois Monin and Xiaomu Shi
+
+OVERALL EVALUATION: 1 (weak accept)
+REVIEWER'S CONFIDENCE: 3 (medium)
+
+----------- REVIEW -----------
+This case study describes the formal verification of parts of an
+instruction set simulator for the ARMv6 instruction set, in
+particular, the C functions that implement individual
+instructions. The IS simulator in turn forms part of an SoC simulation
+platform.
+
+The proof uses Coq and the operation semantics of C from the CompCert
+compiler. The proof is done by establishing a simulation, using a map
+form the C program state to the abstract machine state. The
+specification of the abstract machine is derived in a partly
+mechanized way from a PDF document describing the ARMv6 architecture.
+The approach differs somewhat from similar proofs using, say VCC, in
+that the operational semantics of C is expressed in the logic.
+
+This general approach is fairly standard (for example, it was used in
+the "CLInc stack" to show correct implementation of an ISA in
+hardware). What is new here is that it is a simulator written in C
+being verified, which clearly introduces some complications in dealing
+C's memory semantics.
+
+Having said that, as is typical in descriptions of a large proof
+effort, there is not much to be learned from the description of the
+proof details. A tactic is introduced that seem be useful in the
+folding/unfolding needed to show simulation, but this is fairly
+technical.
+
+Clearly there are many limitations to the proof (some that the paper
+notes). First it isn't clear exactly what is covered by the proof. For
+example, are instruction decoding and interrupts handled? Are external
+library functions verified? In choosing a target for formal
+verification, it makes sense to choose something that is both widely
+used and a significant source of bugs (such as, say, the optimization
+passes of a compiler, but not the front-end). Does an ISS have these
+properties?  Will verification an ISS make SoC designs more reliable?
+
+Also, the paper notes that many ISS's use dynamic instruction set
+translation to improve performance (commercial SoC platform simulators
+do this). How would this impact the proof methodology?
+
+So on the one hand it is useful to have a report on the state of
+progress of theorem proving in systems verification (also, the ISA
+model itself can be a contribution). On the other hand, there is not
+very much to be learned from the paper since what is new is fairly
+technical. I would tend to give the paper the benefit of the doubt as
+a case study, though, since formal verification work on real systems
+is still fairly rare in the literature.
+
+// VJ : fixed
+"would not have been error prone" -> "would have been error prone"
+// VJ addressed
+"Most ISS’es today use some kind of dynamic binary translation..."
+
+Does the one you verify do dynamic binary translation? It doesn't
+sound like it because then you would need a semantics of the target
+machine language.
+
+"The proof starts from an ISS coded in C, where each instruction is coded as
+a C function that modifies the processor state"
+
+Do you also have code that does instruction fetch, decode, interrupt
+handling, etc?
+// VJ fixed
+"that the operational semantics of the C code correspond" ->
+"corresponds" (semantics is singular).
+
+"5. External function call."
+
+So is it correct to say that the implementation of standard library
+functions is not verified? Or do you in fact verify these? Some of
+these are written in hand-optimized assembly language, no? If you do
+verify them, which version of the standard library (or other
+libraries) do you use?
+
+"CPSR = SPSR"
+// VJ fixed
+I guess this means that register CPSR is assigned the value of register
+SPSR, but you should say that here.
+
+
+----------------------- REVIEW 2 ---------------------
+PAPER: 31
+TITLE: Certified Faithful Simulation
+AUTHORS: Vania Joloboff, Jean Francois Monin and Xiaomu Shi
+
+OVERALL EVALUATION: 0 (borderline paper)
+REVIEWER'S CONFIDENCE: 3 (medium)
+
+----------- REVIEW ----------- This paper constructs a certified
+simulator for ARM v6 instruction set.  Firstly, the paper offers a set
+of C programs as the simulator of the instructions of ARM v6
+instruction set; Then, use the existed tool CompCert to translate it
+into verified machine code for simulation, and Coq model for
+verification; Finally, the paper builds the formal semantics of ARM v6
+instruction set in Coq interactively (partial automatic and partial
+manual), and proves that the simulator given by C programs is
+equivalent to the Coq model.  I do not know why the main part of the
+paper did not mention the first part (the C programs for ARM v6
+instruction set). I think it would be better to give some examples to
+show how the instructions can be modeled in C programs.
+
+Here are some suggestions for the paper.  1.The structure of the paper
+should be added in "introduction".  2.I did not see SimSoc anywhere in
+the main part of the paper. Why is it shown in the background part?
+3.The related work mentions that the work is based on SimSoC, but the
+paper did not give any further information about the relation between
+the C programs and SimSoC.  4.In the last paragraph of section 4.1, “a
+dozen documentation problems were found but none that were relevant to
+instruction semantics”. What kinds of problems are found? Has them
+been confirmed by the writers of the documentation.
+
+Here are some typos of the paper.
+// V.J fixed
+1.In the 6th line of section 3.2, there is a punctuation missing.
+
+// VJ fixed
+2.In the 3rd line of section 4.1, there is “…”. It is not so formal.
+
+
+----------------------- REVIEW 3 ---------------------
+PAPER: 31
+TITLE: Certified Faithful Simulation
+AUTHORS: Vania Joloboff, Jean Francois Monin and Xiaomu Shi
+
+OVERALL EVALUATION: -2 (reject)
+REVIEWER'S CONFIDENCE: 5 (expert)
+
+----------- REVIEW -----------
+This paper describes the formal verification of a software
+implementing an ARMv6 simulator. This software is called SimSoC and
+written in C++. The formal verification is conducted using the Coq
+proof assistant. Instead of formalizing SimSoC in Coq, the authors
+follow an original approach relying on the CompCert formally verified
+C compiler. This compiler is written in Coq and ensures the semantic
+preservation of programs during compilation. The main ideas of the
+formal verification are twofold: first, apply the formal semantics of
+the CompCert C source language of the CompCert C compiler on C code,
+and second prove the equivalence between a formal model of the ARM
+architecture and a compilation of the initial C code.
+
+I agree with the authors, this paper addresses an important problem,
+the formal verification software involved in the production of
+reliable software. However, I am not convinced by the followed
+approach, mainly because several parts of the paper are confusing.
+
+More precisely, the paper is 14 pages long. The two remaining pages
+could have been used to better explain the following points.
+
+1) Do you claim that you perform an automatic verification of the
+SimSoC simulator ? Or do you require some manual verification as well?
+The abstract says "the proof is verified with an automated theorem
+prover". What is this automated theorem ? It can not be Coq, as it is
+written on page 3 that "Coq is not an automated theorem prover".
+Similarly, are the instruction proofs described in Section  4.5 fully
+automated ?
+
+2) The guarantees provided by the CompCert compiler are not clear.
+
+// VJ tried to address that
+
+In section 3.2, it is written: "we use the correct machine code
+generated by the C compiler". How do you know that this code is
+correct ? It can not be ensured by the CompCert compiler. Indeed, the
+CompCert compiler can compile correct code but also incorrect
+code. In other words, if the compiler succeeds in generating a code,
+this does not mean that this code is correct.
+
+Moreover, in section 4.2, it is written that the C code you want to
+prove "does not include any construction with unspecified
+behavior". Is it realistic ? How do you guarantee the absence of such
+behaviors ? Is the CompCert compiler useful for that purpose ?
+
+3) Where does the formal model of the ARM architecture come from ?
+Is it connected to the CompCert compiler ? How does it differ from the
+ARM ISS semantics ?
+Fig. 1 presents the overall approach, but it is not clear at all.
+Why do you first need the "ARM ISS in C" to get the "ARM ISS in Coq" ?
+Is there a compilation from the former to the latter ?
+Where is the link with the "real hardware" that is mentioned in the
+introduction ?
+
+Moreover, the state of the art (Section 2) should better compare the
+current work with other hardware models (that are not cited in this
+paper), such as for instance, work done in the SeL4 project or other
+models formally verified using different theorem provers. These works
+are more in the scope of the paper than the deductive verification tools
+that are cited in Section 2.
+
+Detailed remarks
+
+I do not agree with the use of the term "certified" in the title and
+in the paper. A software certification is a legal recognition by some
+regulatory authority that a software complies with its requirements.
+The topic of this paper is formal verification, that differs
+significantly from certification.
+
+Fig.2 details a (well-known) simulation diagram between semantic
+states. What is an "instruction semantics" compared to an "operational
+semantics of the instructions". Aren't both operational semantics ?
+
+Section 4.3 explains that the semantics are written following 2
+different styles (a relational style and a functional one). Why is it
+so ? Does it have an impact on the proofs ? My intuition is that they
+should be harder to perform.
+
+In Section 4.4 devoted to the lemmas library, the details about the
+changes in functions names between CompCert version 1.11 and previous
+versions are confusing and not useful to understand the proofs. Is
+CompCert 1.11 the version you are using ? This is surprising as this
+version is old (07/2012) and seems to differ significantly from the
+current version (2.4). More generally, the technical details discussed
+in this section are hard to follow for a reader who is not a CompCert
+expert. Moreover, explanations on registers CPSR and SPSR are also
+given in this section. They should appear earlier in the paper as
+these registers are used in Fig.3, that is not explained at all.
+
+// VJ fixed
+Section 4.5 describes a work that was previously published (ITP 2013).
+The corresponding paper should be cited and commented.
+
+Minor remarks
+- p. I don't see the arrows of Figure 1 on my printed document.
+- p.9 the first one -> The first one
+- p.9 "we may have here a series of events" What are these events ?
+- p.11 compare it -> compare them
+- p.13 imMplemented
+- p.13 ala CompCert
+
+
+----------------------- REVIEW 4 ---------------------
+PAPER: 31
+TITLE: Certified Faithful Simulation
+AUTHORS: Vania Joloboff, Jean Francois Monin and Xiaomu Shi
+
+OVERALL EVALUATION: 0 (borderline paper)
+REVIEWER'S CONFIDENCE: 4 (high)
+
+----------- REVIEW ----------- The authors describe their efforts in
+developing a verified instruction-set simulator (ISS) for an ARM
+microprocessor.  The purpose of such a simulator is run executables in
+"simulation mode" in order to determine what outputs the executable
+should produce when run on the target platform.  A verified ISS would
+thus produce exactly the same results as the executable would if run
+on a correct hardware implementation of the instruction set.  In this
+paper, Coq is used to oversee the proof of correctness of an ISS,
+which is itself written in a subset of C that the CompCert C compiler
+(a formally verified C compiler) can generate code for.  Coq itself
+has been used to verify CompCert: namely, other work has been done on
+verifying that the object code produced by CompCert C is operationally
+equivalent to the original C program, which has a formal operational
+semantics specified in Coq.  In the current work, the authors show
+that, using the formal operational semantics of CompCert!  C given in
+Coq, their ISS is operationally equivalent to a formal operational
+semantics of the ARM instruction set that they reverse-engineered from
+the ARM documentation.
+
+I have mixed feelings about this paper.  On the one hand, it is a tour
+de force of formal verification; a large, significant piece of
+software (the ISS) has been proven correct with respect to a formal
+specification.  On the other hand, I have concerns about the formal
+specification of the ARM.  As the authors note, there is no formal ARM
+specification; they were forced to devise one from the ARM
+documentation.  This leads to the following concern: to what extent
+are the formal spec and the ISS independently developed?  I have the
+feeling they were developed by the same team, in which case I would
+worry about the possibility that both the formal specification the ISS
+are incorrect, but incorrect in the same way and hence still
+consistent with each other.

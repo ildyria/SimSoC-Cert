@@ -1,0 +1,33 @@
+\begin{coqdoccode}
+\coqdocindent{1.00em}
+\coqdocvar{l'} : \coqdocvar{local}\coqdoceol
+\coqdocindent{1.00em}
+\coqdocvar{b'} : \coqdocvar{bool}\coqdoceol
+\coqdocindent{1.00em}
+\coqdocvar{a'} : \coqdocvar{expr}\coqdoceol
+\coqdocindent{1.00em}
+\coqdocvar{H} : \coqdocvar{eval\_expr} (\coqdocvar{Genv.globalenv} \coqdocvar{prog\_adc}) \coqdocvar{e} \coqdocvar{m} \coqdocvar{RV}\coqdoceol
+\coqdocindent{4.50em}
+(\coqdocvar{Ecall} (\coqdocvar{Evalof} (\coqdocvar{Evar} \coqdocvar{copy\_StatusRegister} \coqdocvar{T14}) \coqdocvar{T14})\coqdoceol
+\coqdocindent{6.00em}
+(\coqdocvar{Econs}\coqdoceol
+\coqdocindent{7.50em}
+(\coqdocvar{Eaddrof}\coqdoceol
+\coqdocindent{9.00em}
+(\coqdocvar{Efield} (\coqdocvar{Ederef} (\coqdocvar{Evalof} (\coqdocvar{Evar} \coqdocvar{proc} \coqdocvar{T3}) \coqdocvar{T3}) \coqdocvar{T6})\coqdoceol
+\coqdocindent{10.50em}
+\coqdocvar{adc\_compcert.cpsr} \coqdocvar{T7}) \coqdocvar{T8})\coqdoceol
+\coqdocindent{7.50em}
+(\coqdocvar{Econs}\coqdoceol
+\coqdocindent{9.00em}
+(\coqdocvar{Ecall} (\coqdocvar{Evalof} (\coqdocvar{Evar} \coqdocvar{spsr} \coqdocvar{T15}) \coqdocvar{T15})\coqdoceol
+\coqdocindent{10.50em}
+(\coqdocvar{Econs} (\coqdocvar{Evalof} (\coqdocvar{Evar} \coqdocvar{proc} \coqdocvar{T3}) \coqdocvar{T3}) \coqdocvar{Enil}) \coqdocvar{T8}) \coqdocvar{Enil}))\coqdoceol
+\coqdocindent{6.00em}
+\coqdocvar{T12}) \coqdocvar{t} \coqdocvar{m'} \coqdocvar{a'}\coqdoceol
+\coqdocindent{1.00em}
+============================\coqdoceol
+\coqdocindent{1.50em}
+\coqdocvar{proc\_state\_related} \coqdocvar{m'} \coqdocvar{e} \coqdocvar{st'}\coqdoceol
+\coqdocnoindent
+\end{coqdoccode}

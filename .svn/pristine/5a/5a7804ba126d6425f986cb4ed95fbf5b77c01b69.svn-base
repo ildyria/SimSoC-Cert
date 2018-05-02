@@ -1,0 +1,299 @@
+
+
+\section{ARM Operations in Simlight}
+\label{sec:simlight}
+
+In the right branch of the overall architecture (Fig.~\ref{fig:archi}),
+we generate \simlight according to the C syntax given by Compcert.
+Here, actually we have two presentations of the corresponding code.
+The first one is in a C source which is integrated into SimSoC 
+(see \cite{rapido11} for more details), its contents is:
+%
+\begin{humC}
+/* A4.1.2 ADC */
+void ADC_simlight(struct SLv6_Processor *proc,
+    const bool S,
+    const SLv6_Condition cond,
+    const uint8_t d,
+    const uint8_t n,
+    const uint32_t shifter_operand)
+\{
+const uint32_t old_Rn = reg(proc,n);
+if (ConditionPassed(&proc->cpsr, cond)) \{
+ set_reg_or_pc(proc,d,((old_Rn + shifter_operand) + proc->cpsr.C_flag));
+ if (((S == 1) && (d == 15))) \{
+  if (CurrentModeHasSPSR(proc))
+   copy_StatusRegister(&proc->cpsr, spsr(proc));
+  else
+   unpredictable();
+  \} else \{
+   if ((S == 1)) \{
+    proc->cpsr.N_flag = get_bit(reg(proc,d),31);
+    proc->cpsr.Z_flag = ((reg(proc,d) == 0)? 1: 0);
+    proc->cpsr.C_flag = 
+     CarryFrom_add3(old_Rn, shifter_operand, proc->cpsr.C_flag);
+    proc->cpsr.V_flag = 
+     OverflowFrom_add3(old_Rn, shifter_operand, proc->cpsr.C_flag);
+\} \} \} \}
+\end{humC}
+%
+This piece of code uses a function called \texttt{set\_reg\_or\_pc}
+instead of \texttt{set\_reg}:
+the latter also exists in \simlight and the function to be used depends
+on tricky considerations about register 15, which happens to be the PC.
+More details about this are given in Section~\ref{s:diff-sem-simlight}.
+
+The second presentation is an AST according to a Coq inductive type defined
+in Compcert.
+%
+\begin{coq}
+Definition ADC\_Coq\_simlight := (ADC, Internal 
+    \{| fn_return := void; fn_params := 
+      [proc -: `*` typ_SLv6_Processor; 
+       S -: uint8; cond -: int32; d -: uint8; n -: uint8; 
+       shifter_operand -: uint32];
+      fn_vars := [ old_Rn -: uint32];
+      fn_body :=
+($ old_Rn`:\begin{math}\circ\end{math}) `= (call (\textbackslash{}reg`:\begin{math}\circ\end{math}) E[\textbackslash{}proc`:\begin{math}\circ\end{math}; \textbackslash{}n`:\begin{math}\circ\end{math}] \begin{math}\circ\end{math})`:\begin{math}\circ\end{math};;
+`if\,(\begin{math}\bullet\end{math}\,(\textbackslash{}ConditionPassed`:\begin{math}\circ\end{math})\,E[&((`*(\textbackslash{}proc`:\begin{math}\circ\end{math})`:\begin{math}\circ\end{math})|cpsr`:\begin{math}\circ\end{math})`:\begin{math}\circ\end{math};\,\textbackslash{}cond`:\begin{math}\circ\end{math}] \begin{math}\circ\end{math})
+ then (\begin{math}\bullet\end{math}\,(\textbackslash{}set_reg_or_pc`:\begin{math}\circ\end{math}) E[\textbackslash{}proc`:\begin{math}\circ\end{math}; \textbackslash{}d`:\begin{math}\circ\end{math}; ((\textbackslash{}old_Rn`:\begin{math}\circ\end{math})+\begin{math}\bullet\end{math})+\begin{math}\bullet\end{math}:\begin{math}\circ\end{math}]\,\begin{math}\circ\end{math});;
+ `if ((($ S`:\begin{math}\circ\end{math})==(#1`:\begin{math}\circ\end{math})`:\begin{math}\circ\end{math})&(($ d`:\begin{math}\circ\end{math})==(#15`:\begin{math}\circ\end{math})`:\begin{math}\circ\end{math})`:\begin{math}\circ\end{math})
+  then `if (call (\textbackslash{}CurrentModeHasSPSR`:\begin{math}\circ\end{math}) E[\textbackslash{}proc`:\begin{math}\circ\end{math}] \begin{math}\circ\end{math})
+   then (call (\textbackslash{}copy_StatusRegister`:\begin{math}\circ\end{math}) E[&(\begin{math}\bullet\end{math}|cpsr`:\begin{math}\circ\end{math})`:\begin{math}\circ\end{math}; \begin{math}\bullet\end{math}] \begin{math}\circ\end{math})
+   else (call ($ unpredictable`:\begin{math}\circ\end{math}) E[] \begin{math}\circ\end{math})
+  else `if (($ S`:\begin{math}\circ\end{math})==(#1`:\begin{math}\circ\end{math})`:\begin{math}\circ\end{math})
+   then ((($ proc`:\begin{math}\circ\end{math})|cpsr`:\begin{math}\circ\end{math})|N_flag`:\begin{math}\circ\end{math}) `= 
+    (\begin{math}\bullet\end{math}\,(\textbackslash{}get_bit`:\begin{math}\circ\end{math}) E[(\begin{math}\bullet\end{math}\,(\textbackslash{}reg`:\begin{math}\circ\end{math}) E[\textbackslash{}proc`:\begin{math}\circ\end{math}; \textbackslash{}d`:\begin{math}\circ\end{math}] \begin{math}\circ\end{math}); #31`:\begin{math}\circ\end{math}] \begin{math}\circ\end{math})`:\begin{math}\circ\end{math};;
+        ((($ proc`:\begin{math}\circ\end{math})|cpsr`:\begin{math}\circ\end{math})|Z_flag`:\begin{math}\circ\end{math}) `= 
+    (((\begin{math}\bullet\end{math} (\textbackslash{}reg`:\begin{math}\circ\end{math}) \begin{math}\bullet\end{math} \begin{math}\circ\end{math})==(#0`:\begin{math}\circ\end{math})`:\begin{math}\circ\end{math})?(#1`:\begin{math}\circ\end{math})`:(#0`:\begin{math}\circ\end{math})`:\begin{math}\circ\end{math})`:\begin{math}\circ\end{math};;
+        ((($ proc`:\begin{math}\circ\end{math})|cpsr`:\begin{math}\circ\end{math})|C_flag`:\begin{math}\circ\end{math}) `= 
+    (\begin{math}\bullet\end{math} (\textbackslash{}CarryFrom_add3`:\begin{math}\circ\end{math}) E[\begin{math}\bullet\end{math}; \begin{math}\bullet\end{math}; (\begin{math}\bullet\end{math} (\begin{math}\bullet\end{math}|C_flag`:\begin{math}\circ\end{math}) \begin{math}\circ\end{math})] \begin{math}\circ\end{math})`:\begin{math}\circ\end{math};;
+        ((($ proc`:\begin{math}\circ\end{math})|cpsr`:\begin{math}\circ\end{math})|V_flag`:\begin{math}\circ\end{math}) `= 
+    (\begin{math}\bullet\end{math} (\textbackslash{}OverflowFrom_add3`:\begin{math}\circ\end{math}) E[(\begin{math}\bullet\end{math} (\textbackslash{}old_Rn`:\begin{math}\circ\end{math}) \begin{math}\circ\end{math}); \begin{math}\bullet\end{math}; \begin{math}\bullet\end{math}] \begin{math}\circ\end{math})`:\begin{math}\circ\end{math}
+   else skip
+ else skip |\}).
+\end{coq}
+%$
+%
+The symbols ``$\circ$'' and ``$\bullet$'' do not belong to
+the real notations, they stand for types and sub-terms not represented here
+for the sake of simplicity.
+Indeed, an important practical issue is that
+Compcert-C ASTs include types everywhere,
+hence a naive approach would generates heavy and repetitive
+expressions at the places where $\circ$ occurs,
+thus making the result unreadable
+(and space consuming).
+We therefore introduce auxiliary definitions for types
+and various optimizations for sharing type expressions.
+We also introduce additional convenient notations,
+as shown above for \texttt{ADC\_Coq\_simlight},
+providing altogether a C-looking presentation of the AST.
+ 
+%In particular, the expression type behind each ``$\circ$'' are
+%not necessarily equal. This hole
+%``\begin{math}\bullet\end{math}'' contains an arbitrary term.
+%% \begin{coq}
+%% Definition fun_ADC := (ADC, Internal 
+%%     \{| fn_return := void; fn_params := 
+%%       [proc -: `*` typ_SLv6_Processor; 
+%%        S -: uint8; cond -: int32; d -: uint8; n -: uint8; 
+%%        shifter_operand -: uint32];
+%%       fn_vars := [ old_Rn -: uint32];
+%%       fn_body :=
+%%         ($ old_Rn`:T1) `= (call (\textbackslash{}reg`:T2) E[\textbackslash{}proc`:T3; \textbackslash{}n`:T4] T1)`:T1;;
+%%         `if (call (\textbackslash{}ConditionPassed`:T5) E[&((`*(\textbackslash{}proc`:T3)`:T6)|cpsr`:T6)`:T6; \textbackslash{}cond`:T7] T5)
+%%           then (call (\textbackslash{}set_reg_or_pc`:T8) E[\textbackslash{}proc`:T3; \textbackslash{}d`:T4; ((\textbackslash{}old_Rn`:T1)+($ shifter_operand`:T1)`:T1)+((($ proc`:T3)|cpsr`:T6)|C_flag`:T4)`:T1] T9);;
+%%             `if ((($ S`:T4)==(#1`:T7)`:T1)&(($ d`:T4)==(#15`:T7)`:T1)`:T1)
+%%               then `if (call (\textbackslash{}CurrentModeHasSPSR`:T10) E[\textbackslash{}proc`:T3] T10)
+%%                 then (call (\textbackslash{}copy_StatusRegister`:T11) E[&((`*(\textbackslash{}proc`:T3)`:T6)|cpsr`:T6)`:T6; (call (\textbackslash{}spsr`:T6) E[\textbackslash{}proc`:T3] T6)] T9)
+%%                 else (call ($ unpredictable`:T9) E[] T9)
+%%               else `if (($ S`:T4)==(#1`:T7)`:T1)
+%%                 then ((($ proc`:T3)|cpsr`:T6)|N_flag`:T4) `= 
+%%                        (call (\textbackslash{}get_bit`:T12) E[(call (\textbackslash{}reg`:T2) E[\textbackslash{}proc`:T3; \textbackslash{}d`:T4] T1); #31`:T7] T1)`:T9;;
+%%                      ((($ proc`:T3)|cpsr`:T6)|Z_flag`:T4) `= 
+%%                        (((call (\textbackslash{}reg`:T2) E[\textbackslash{}proc`:T3; \textbackslash{}d`:T4] T1)==(#0`:T7)`:T1)?(#1`:T7)`:(#0`:T7)`:T4)`:T9;;
+%%                      ((($ proc`:T3)|cpsr`:T6)|C_flag`:T4) `= 
+%%                        (call (\textbackslash{}CarryFrom_add3`:T9) E[(valof (\textbackslash{}old_Rn`:T1) T1); \textbackslash{}shifter_operand`:T1; (valof ((($ proc`:T3)|cpsr`:T6)|C_flag`:T4) T4)] T9)`:T9;;
+%%                      ((($ proc`:T3)|cpsr`:T6)|V_flag`:T4) `= 
+%%                        (call (\textbackslash{}OverflowFrom_add3`:T9) E[(valof (\textbackslash{}old_Rn`:T1) T1); \textbackslash{}shifter_operand`:T1; (valof ((($ proc`:T3)|cpsr`:T6)|C_flag`:T4) T4)] T9)`:T9
+%%                 else skip
+%%           else skip |\}).
+%% \end{coq}
+
+
+We plan to generate the first form from the AST using a pretty-printer. 
+% (We already know that we get the same result for 
+% some operations, such as \texttt{ADC}).
+The following discussion is based on the AST presentation.
+
+\subsection{Differences with the Coq Model of ARM Operations}
+\label{s:diff-sem-simlight}
+
+Although the encoding of operations in \simlight and 
+in the Coq semantics of ARM are
+generated from the same pseudo-code AST, results are rather
+different because, on one hand, they are based on different data types
+and, on the other hand, their semantics operates on different memory models.
+Therefore, the proof that the simulation of an operation in \simlight 
+behaves as expected according to the Coq semantics is not trivial.
+
+In the Coq model of ARM, everything is kept as simple as possible. 
+ARM Registers are presented by words, 
+the memory is a map from address to contents, 
+the initial value of parameters such as \texttt{Rn} 
+is available for free -- we are in an functional setting,
+etc.
+In contrast, \simlight uses an imperative setting
+(hence the need to store the initial value of  \texttt{Rn}
+in  \texttt{Old\_Rn}, for instance).
+More importantly, complex and redundant data structure are involved
+in order to get fast speed.
+For example, a 32 bits wide status register is defined as a data structure
+containing, for every significant bit, a field of Boolean type
+-- internally, this is represented by a byte. 
+A more interesting example is the program counter, which is
+the register 15 at the same time.
+As this register is sometimes used as an ordinary register,
+and sometimes used as the PC, 
+the corresponding data structure implemented in \simlight
+includes an array which stores all the registers
+and a special field \texttt{pc}, which is a pointer aliasing register 15.
+This register plays an important role in ARM architecture.
+Its value is used in the \texttt{may\_branch} condition 
+for simulating basic blocks~\cite{rapido11}. 
+And during the simulation loop, it is read many times.
+Note that this special field \texttt{pc} is read-only.
+
+Moreover we have to work with the Compcert memory model of such
+data structures. This, model detailed in \cite{lerbla08}, 
+introduces unavoidable complications
+in order to take low-level considerations,
+such as overlapping memory blocks into account.
+Another source of complexity is that, in a function call,
+a local variable takes a meaningful value only after
+a number of steps representing parameter binding.
+More details are given in Section~\ref{sec:results}.
+
+Another important difference is that,
+in the Coq specification, the semantics is defined by a function
+wheras, 
+in Compcert-C, the semantics is a relation between the
+initial memory and the final memory when evaluating statements
+or expressions.
+
+\subsection{Translation from Pseudo-code AST to Compcert-C AST}
+
+% In order to get the \simlight Compcert-C model,
+% we build an AST translation.
+% From the previous code generating framework, we have a
+% pseudo-code AST describing the operation of instruction.
+% And Compcert project provides its own Compcert-C AST.
+We describe here the mapping from the pseudo-code AST to Compcert-C AST.
+%
+This translation is not only to Compcert-C AST, 
+but more specifically to the Compcert-C AST for \simlight. 
+It makes use of an existing library of functions dedicated to \simlight.
+%Within it, types and auxiliary functions are defined.
+For example in \texttt{ADC\_pseudocode}, 
+the occurrence of \texttt{CPSR}
+stands for an expression representing 
+the contents of \texttt{CPSR} in the current state.
+But in \simlight, 
+this corresponds to a call to a library function 
+\texttt{StatusRegister\_to\_uint32}.
+The translation deals with many similar situations.
+
+% The pseudo-code AST defines types for expressions, statements and programs,
+% and Compcert-C AST has the similar inductive types.
+% Then, it is able to find the corresponding representation.
+% In pseudo-code AST, parts of the expressions indicated to ARM system, 
+% like register, memory and coprocessor expressions,
+% invocation of library function, or bit range expressions.
+% The Compcert-C
+% expressions are indicating the common programming operations 
+% like binary arithmetic operations, type cast,
+% assignments, function calls, etc. 
+% So those special expressions for ARM
+% operations are transformed into Compcert-C function calls.
+% For example pseudo-code AST has an expression $Reg (Var n, Some m)$,
+% means the content of register number $n$ with mode $m$.
+% In \simlight it will be a call to $reg\_m$ with parameters $proc$, $n$ and $m$.
+% And the expression like $If\_exp$ will be transformed directly.
+
+Let us now sketch the translation process.
+Both the definitions of pseudo-code AST and Compcert-C AST
+include inductive types for expressions, statements and programs.
+Compcert-C expressions are limited to common programming operations 
+like binary arithmetic operations, type cast,
+assignments, function calls, etc. 
+For many constructors of pseudo-code AST the mapping is quite natural,
+but others require a special treatment:
+the ones which are specific to ARM, 
+for representing registers, memory and coprocessor expressions,
+invocation of library functions, or bit range expressions.
+%
+Those special expressions are translated to Compcert-C function calls.
+For example, the pseudo-code expression \texttt{Reg (Var n, Some m)},
+designates the contents of register number \texttt{n} with the ARM processor mode \texttt{m}.
+In \simlight, this becomes a call to \texttt{reg\_m} with parameters \texttt{proc}, \texttt{n} and \texttt{m}.
+
+In summary, the translation of expressions looks as follows:
+\begin{ml}
+let rec Transf\_exp = function
+  | Reg (e, m) -> Ecall reg\_m ...
+  | CPSR -> Ecall StatusRegister\_to\_uint32 ...
+  | Memory (e, n) -> Ecall read\_mem ...
+  | If\_exp (e1, e2, e3) -> Econdition ...
+  | BinOp (e1, op, e2) -> Ebinop ...
+  | Fun (f, e) -> Ecall f ...
+  ...
+\end{ml}
+
+For statements, we have a similar situation.
+Here, assignments require a special attention.
+For \!example in \!\texttt{ADC\_pseudocode}, there is \!an assignment
+\texttt{CPSR=SPSR}. 
+In \simlight, this assignment is dealt with 
+using a call to the function \\\texttt{copy\_StatusRegister}.
+The corresponding Compcert-C AST embeds this call
+as an argument of the constructor \texttt{Sdo}.
+
+In summary, the translation of statements looks as follows:
+\begin{ml}
+let rec Transf\_stm = function
+  | Assign (dst, src) -> Sdo (Ecall funct ...)
+  | For (c, min, max, i) -> Sfor ...
+  | If (e, i1, i2) -> Sifthenelse ...
+  | Case (e, s, default) -> Sswitch ...
+  ...
+\end{ml}
+
+In our case,
+each operation is transformed to a Compcert-C program
+where there are no global variables,
+the function list contains only 
+the function corresponding to the considered ARM operation
+(let us call it $f$, it is of course an internal function), 
+and with an empty \texttt{main}.
+When the program is called, 
+the global environment built for this program will
+only contain a pointer to $f$.
+ 
+The translation from pseudo-code AST program to Compcert-C AST program
+has the following shape:
+\begin{ml}
+let Transformed\_program = 
+  \{ vars = []
+  ; functs = [ Internal (instr\_id,
+                  \{ fn\_return = Tvoid
+                  ; fn\_params = ... (* operation parameters *)
+                  ; fn\_vars = ... (* operation local variables *)
+                  ; fn\_body = ... (Transf\_stm ...) \}) ]
+  ; main = empty\_main \}
+\end{ml}
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "cpp"
+%%% End: 
